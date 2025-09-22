@@ -1,7 +1,7 @@
-import { FocusTimer } from '@/components/FocusTimer';
+import { Dashboard } from '@/components/Dashboard';
 
 const Index = () => {
-  return <FocusTimer />;
+  return <Dashboard />;
 };
 
 export default Index;
