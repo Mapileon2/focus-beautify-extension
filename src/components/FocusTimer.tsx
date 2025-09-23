@@ -7,6 +7,7 @@ import { TimerCircle } from './TimerCircle';
 import { TimerSettings } from './TimerSettings';
 import { SessionStats } from './SessionStats';
 import { TaskList } from './TaskList';
+import SmilePopup from './SmilePopup';
 import { useToast } from '@/hooks/use-toast';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
@@ -29,6 +30,7 @@ interface TimerSettings {
 export function FocusTimer() {
   const { toast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
+  const [showSmilePopup, setShowSmilePopup] = useState(false);
   const [settings, setSettings] = useState<TimerSettings>({
     focusTime: 25 * 60, // 25 minutes
     breakTime: 5 * 60,  // 5 minutes
@@ -135,6 +137,14 @@ export function FocusTimer() {
     }
   };
 
+  const handleSkipBreak = () => {
+    nextSession();
+  };
+
+  const handleStartBreak = () => {
+    nextSession();
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -143,7 +153,7 @@ export function FocusTimer() {
         setTimer(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
       }, 1000);
     } else if (timer.timeLeft === 0) {
-      nextSession();
+      setShowSmilePopup(true);
     }
 
     return () => clearInterval(interval);
@@ -264,6 +274,16 @@ export function FocusTimer() {
             onClose={() => setShowSettings(false)}
           />
         )}
+
+        {/* Smile Popup */}
+        <SmilePopup
+          isOpen={showSmilePopup}
+          onClose={() => setShowSmilePopup(false)}
+          onSkipBreak={handleSkipBreak}
+          onStartBreak={handleStartBreak}
+          sessionType={timer.mode}
+          sessionCount={timer.totalSessions}
+        />
       </div>
     </div>
   );
