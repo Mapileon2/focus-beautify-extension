@@ -1,78 +1,81 @@
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Settings as SettingsIcon, 
-  Bell, 
-  Palette, 
-  Clock, 
-  Volume2, 
-  Moon, 
-  Sun,
-  Monitor,
-  Smartphone,
-  Download,
-  Shield,
-  Key
-} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key } from 'lucide-react';
+
+interface SmilePopupSettings {
+  enabled: boolean;
+  showQuotes: boolean;
+  showCelebration: boolean;
+  customImage: string;
+  animationIntensity: 'low' | 'medium' | 'high';
+  quotesSource: 'motivational' | 'productivity' | 'custom';
+  autoClose: boolean;
+  closeDelay: number;
+}
+
+interface AppSettings {
+  theme: 'light' | 'dark' | 'system';
+  notifications: boolean;
+  soundEnabled: boolean;
+  autoStartBreaks: boolean;
+  autoStartPomodoros: boolean;
+  smilePopup: SmilePopupSettings;
+  privacy: {
+    dataCollection: boolean;
+    analytics: boolean;
+  };
+}
 
 export function Settings() {
-  const [settings, setSettings] = useState({
-    // Timer Settings
-    focusDuration: 25,
-    shortBreakDuration: 5,
-    longBreakDuration: 15,
-    sessionsUntilLongBreak: 4,
-    autoStartBreaks: true,
+  const [settings, setSettings] = useState<AppSettings>({
+    theme: 'system',
+    notifications: true,
+    soundEnabled: true,
+    autoStartBreaks: false,
     autoStartPomodoros: false,
-    
-    // Notifications
-    desktopNotifications: true,
-    soundNotifications: true,
-    sessionReminders: true,
-    breakReminders: true,
-    
-    // Appearance
-    theme: 'dark',
-    soundVolume: 70,
-    backgroundSounds: false,
-    
-    // Privacy & Data
-    dataCollection: true,
-    autoSave: true,
-    cloudSync: false,
+    smilePopup: {
+      enabled: true,
+      showQuotes: true,
+      showCelebration: true,
+      customImage: '',
+      animationIntensity: 'medium',
+      quotesSource: 'motivational',
+      autoClose: false,
+      closeDelay: 5
+    },
+    privacy: {
+      dataCollection: true,
+      analytics: true,
+    },
   });
 
-  const updateSetting = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+  const updateSmilePopupSetting = <K extends keyof SmilePopupSettings>(
+    key: K, 
+    value: SmilePopupSettings[K]
+  ) => {
+    setSettings(prev => ({
+      ...prev,
+      smilePopup: {
+        ...prev.smilePopup,
+        [key]: value
+      }
+    }));
   };
-
-  const themes = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ];
-
-  const soundOptions = [
-    { value: 'bell', label: 'Bell' },
-    { value: 'chime', label: 'Chime' },
-    { value: 'ping', label: 'Ping' },
-    { value: 'none', label: 'None' },
-  ];
 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="timer" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 glass">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="timer">Timer</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="smile">Smile Popup</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
         </TabsList>
 
@@ -80,83 +83,32 @@ export function Settings() {
         <TabsContent value="timer" className="space-y-6">
           <Card className="glass p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-              <Clock className="h-5 w-5" />
-              Timer Duration
+              <Timer className="h-5 w-5" />
+              Timer Configuration
             </h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="focus-duration">Focus Duration (minutes)</Label>
-                <Input
-                  id="focus-duration"
-                  type="number"
-                  min="5"
-                  max="60"
-                  value={settings.focusDuration}
-                  onChange={(e) => updateSetting('focusDuration', parseInt(e.target.value))}
-                  className="glass"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="short-break">Short Break (minutes)</Label>
-                <Input
-                  id="short-break"
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={settings.shortBreakDuration}
-                  onChange={(e) => updateSetting('shortBreakDuration', parseInt(e.target.value))}
-                  className="glass"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="long-break">Long Break (minutes)</Label>
-                <Input
-                  id="long-break"
-                  type="number"
-                  min="5"
-                  max="60"
-                  value={settings.longBreakDuration}
-                  onChange={(e) => updateSetting('longBreakDuration', parseInt(e.target.value))}
-                  className="glass"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sessions-until-long">Sessions until Long Break</Label>
-                <Input
-                  id="sessions-until-long"
-                  type="number"
-                  min="2"
-                  max="8"
-                  value={settings.sessionsUntilLongBreak}
-                  onChange={(e) => updateSetting('sessionsUntilLongBreak', parseInt(e.target.value))}
-                  className="glass"
-                />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="glass p-6">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Auto-Start Options</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Auto-start breaks</p>
-                  <p className="text-sm text-muted-foreground">Automatically start breaks when focus sessions end</p>
+                  <Label>Auto-start Breaks</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically start breaks after focus sessions
+                  </p>
                 </div>
                 <Switch
                   checked={settings.autoStartBreaks}
-                  onCheckedChange={(checked) => updateSetting('autoStartBreaks', checked)}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoStartBreaks: checked }))}
                 />
               </div>
-              <Separator />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Auto-start pomodoros</p>
-                  <p className="text-sm text-muted-foreground">Automatically start next focus session after breaks</p>
+                  <Label>Auto-start Pomodoros</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically start focus sessions after breaks
+                  </p>
                 </div>
                 <Switch
                   checked={settings.autoStartPomodoros}
-                  onCheckedChange={(checked) => updateSetting('autoStartPomodoros', checked)}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoStartPomodoros: checked }))}
                 />
               </div>
             </div>
@@ -173,129 +125,184 @@ export function Settings() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Desktop Notifications</p>
-                  <p className="text-sm text-muted-foreground">Show browser notifications for session changes</p>
+                  <Label>Desktop Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show browser notifications for session changes
+                  </p>
                 </div>
                 <Switch
-                  checked={settings.desktopNotifications}
-                  onCheckedChange={(checked) => updateSetting('desktopNotifications', checked)}
+                  checked={settings.notifications}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, notifications: checked }))}
                 />
               </div>
-              <Separator />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Sound Notifications</p>
-                  <p className="text-sm text-muted-foreground">Play sound when sessions start or end</p>
+                  <Label>Sound Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Play sound when sessions start or end
+                  </p>
                 </div>
                 <Switch
-                  checked={settings.soundNotifications}
-                  onCheckedChange={(checked) => updateSetting('soundNotifications', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Session Reminders</p>
-                  <p className="text-sm text-muted-foreground">Remind me to start scheduled sessions</p>
-                </div>
-                <Switch
-                  checked={settings.sessionReminders}
-                  onCheckedChange={(checked) => updateSetting('sessionReminders', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Break Reminders</p>
-                  <p className="text-sm text-muted-foreground">Remind me to take breaks</p>
-                </div>
-                <Switch
-                  checked={settings.breakReminders}
-                  onCheckedChange={(checked) => updateSetting('breakReminders', checked)}
-                />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="glass p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-              <Volume2 className="h-5 w-5" />
-              Sound Settings
-            </h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Notification Sound</Label>
-                <Select defaultValue="bell">
-                  <SelectTrigger className="glass">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {soundOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Volume: {settings.soundVolume}%</Label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={settings.soundVolume}
-                  onChange={(e) => updateSetting('soundVolume', parseInt(e.target.value))}
-                  className="w-full"
+                  checked={settings.soundEnabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, soundEnabled: checked }))}
                 />
               </div>
             </div>
           </Card>
         </TabsContent>
 
-        {/* Appearance */}
-        <TabsContent value="appearance" className="space-y-6">
+        {/* Smile Popup Settings */}
+        <TabsContent value="smile" className="space-y-6">
           <Card className="glass p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
-              <Palette className="h-5 w-5" />
-              Theme & Appearance
+            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+              <Smile className="h-5 w-5 text-primary" />
+              Smile Popup Configuration
             </h3>
+            
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Theme</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {themes.map(theme => {
-                    const Icon = theme.icon;
-                    return (
-                      <Button
-                        key={theme.value}
-                        variant={settings.theme === theme.value ? "timer" : "outline"}
-                        className="h-12 flex-col gap-1"
-                        onClick={() => updateSetting('theme', theme.value)}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <span className="text-xs">{theme.label}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-              <Separator />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Background Sounds</p>
-                  <p className="text-sm text-muted-foreground">Play ambient sounds during focus sessions</p>
+                  <Label>Enable Smile Popup</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Show celebration popup when sessions complete
+                  </p>
                 </div>
                 <Switch
-                  checked={settings.backgroundSounds}
-                  onCheckedChange={(checked) => updateSetting('backgroundSounds', checked)}
+                  checked={settings.smilePopup.enabled}
+                  onCheckedChange={(checked) => updateSmilePopupSetting('enabled', checked)}
                 />
               </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Motivational Quotes</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display inspirational quotes in popup
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.smilePopup.showQuotes}
+                  onCheckedChange={(checked) => updateSmilePopupSetting('showQuotes', checked)}
+                  disabled={!settings.smilePopup.enabled}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Celebration Effects</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable floating sparkles and animations
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.smilePopup.showCelebration}
+                  onCheckedChange={(checked) => updateSmilePopupSetting('showCelebration', checked)}
+                  disabled={!settings.smilePopup.enabled}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label>Custom Motivation Image</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter image URL or upload"
+                    value={settings.smilePopup.customImage}
+                    onChange={(e) => updateSmilePopupSetting('customImage', e.target.value)}
+                    disabled={!settings.smilePopup.enabled}
+                  />
+                  <Button variant="outline" size="icon" disabled={!settings.smilePopup.enabled}>
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </div>
+                {settings.smilePopup.customImage && (
+                  <div className="mt-2">
+                    <img 
+                      src={settings.smilePopup.customImage} 
+                      alt="Preview" 
+                      className="h-20 w-20 object-cover rounded border"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <Label>Animation Intensity</Label>
+                <div className="flex gap-2">
+                  {(['low', 'medium', 'high'] as const).map((intensity) => (
+                    <Button
+                      key={intensity}
+                      variant={settings.smilePopup.animationIntensity === intensity ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateSmilePopupSetting('animationIntensity', intensity)}
+                      disabled={!settings.smilePopup.enabled}
+                      className="capitalize"
+                    >
+                      <Sparkles className="mr-1 h-3 w-3" />
+                      {intensity}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Quotes Source</Label>
+                <div className="flex gap-2">
+                  {(['motivational', 'productivity', 'custom'] as const).map((source) => (
+                    <Button
+                      key={source}
+                      variant={settings.smilePopup.quotesSource === source ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => updateSmilePopupSetting('quotesSource', source)}
+                      disabled={!settings.smilePopup.enabled || !settings.smilePopup.showQuotes}
+                      className="capitalize"
+                    >
+                      {source}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto Close Popup</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically close popup after set time
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.smilePopup.autoClose}
+                  onCheckedChange={(checked) => updateSmilePopupSetting('autoClose', checked)}
+                  disabled={!settings.smilePopup.enabled}
+                />
+              </div>
+
+              {settings.smilePopup.autoClose && (
+                <div className="space-y-2">
+                  <Label>Auto Close Delay (seconds)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={settings.smilePopup.closeDelay}
+                    onChange={(e) => updateSmilePopupSetting('closeDelay', parseInt(e.target.value) || 5)}
+                    disabled={!settings.smilePopup.enabled}
+                  />
+                </div>
+              )}
             </div>
           </Card>
         </TabsContent>
 
-        {/* Privacy & Data */}
+        {/* Privacy Settings */}
         <TabsContent value="privacy" className="space-y-6">
           <Card className="glass p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
@@ -305,34 +312,32 @@ export function Settings() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Data Collection</p>
-                  <p className="text-sm text-muted-foreground">Allow anonymous usage analytics to improve the app</p>
+                  <Label>Data Collection</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow anonymous usage analytics to improve the app
+                  </p>
                 </div>
                 <Switch
-                  checked={settings.dataCollection}
-                  onCheckedChange={(checked) => updateSetting('dataCollection', checked)}
+                  checked={settings.privacy.dataCollection}
+                  onCheckedChange={(checked) => setSettings(prev => ({
+                    ...prev,
+                    privacy: { ...prev.privacy, dataCollection: checked }
+                  }))}
                 />
               </div>
-              <Separator />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Auto-save Progress</p>
-                  <p className="text-sm text-muted-foreground">Automatically save your session data locally</p>
+                  <Label>Analytics</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Send performance and usage statistics
+                  </p>
                 </div>
                 <Switch
-                  checked={settings.autoSave}
-                  onCheckedChange={(checked) => updateSetting('autoSave', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Cloud Sync</p>
-                  <p className="text-sm text-muted-foreground">Sync your data across devices (requires account)</p>
-                </div>
-                <Switch
-                  checked={settings.cloudSync}
-                  onCheckedChange={(checked) => updateSetting('cloudSync', checked)}
+                  checked={settings.privacy.analytics}
+                  onCheckedChange={(checked) => setSettings(prev => ({
+                    ...prev,
+                    privacy: { ...prev.privacy, analytics: checked }
+                  }))}
                 />
               </div>
             </div>

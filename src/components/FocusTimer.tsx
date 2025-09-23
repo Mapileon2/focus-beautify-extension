@@ -12,6 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
 
+interface FocusTimerProps {
+  isCompact?: boolean;
+}
+
 interface TimerState {
   timeLeft: number;
   isRunning: boolean;
@@ -27,7 +31,7 @@ interface TimerSettings {
   sessionsUntilLongBreak: number;
 }
 
-export function FocusTimer() {
+export function FocusTimer({ isCompact = false }: FocusTimerProps) {
   const { toast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
   const [showSmilePopup, setShowSmilePopup] = useState(false);
@@ -160,6 +164,94 @@ export function FocusTimer() {
   }, [timer.isRunning, timer.timeLeft]);
 
   const progress = ((getTimerDuration(timer.mode) - timer.timeLeft) / getTimerDuration(timer.mode)) * 100;
+
+  if (isCompact) {
+    return (
+      <div className="space-y-4">
+        {/* Compact Timer Display */}
+        <div className="text-center">
+          <h2 className="text-sm font-medium text-muted-foreground mb-2">
+            {getModeTitle(timer.mode)}
+          </h2>
+          <div className="mb-4">
+            <TimerCircle
+              timeLeft={timer.timeLeft}
+              totalTime={getTimerDuration(timer.mode)}
+              mode={timer.mode}
+              isRunning={timer.isRunning}
+              size="sm"
+            />
+          </div>
+          <div className="timer-display-compact text-foreground mb-4">
+            {formatTime(timer.timeLeft)}
+          </div>
+          <Progress value={progress} className="h-1 mb-4" />
+        </div>
+
+        {/* Compact Controls */}
+        <div className="flex justify-center gap-2">
+          <Button
+            variant={getModeVariant(timer.mode)}
+            size="sm"
+            onClick={toggleTimer}
+            className="min-w-20"
+          >
+            {timer.isRunning ? (
+              <>
+                <Pause className="mr-1 h-3 w-3" />
+                Pause
+              </>
+            ) : (
+              <>
+                <Play className="mr-1 h-3 w-3" />
+                Start
+              </>
+            )}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetTimer}
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSettings(true)}
+          >
+            <Settings className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {/* Compact Session Info */}
+        <div className="text-center text-xs text-muted-foreground">
+          Session {timer.currentSession} • {timer.totalSessions} completed
+        </div>
+
+        {/* Settings Modal */}
+        {showSettings && (
+          <TimerSettings
+            settings={settings}
+            onSettingsChange={setSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+
+        {/* Smile Popup */}
+        <SmilePopup
+          isOpen={showSmilePopup}
+          onClose={() => setShowSmilePopup(false)}
+          onSkipBreak={handleSkipBreak}
+          onStartBreak={handleStartBreak}
+          sessionType={timer.mode}
+          sessionCount={timer.totalSessions}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background-secondary p-4 md:p-8">

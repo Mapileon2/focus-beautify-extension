@@ -6,11 +6,18 @@ interface TimerCircleProps {
   totalTime: number;
   mode: TimerMode;
   isRunning: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function TimerCircle({ timeLeft, totalTime, mode, isRunning }: TimerCircleProps) {
-  const radius = 120;
-  const circumference = 2 * Math.PI * radius;
+export function TimerCircle({ timeLeft, totalTime, mode, isRunning, size = 'lg' }: TimerCircleProps) {
+  const sizes = {
+    sm: { radius: 40, strokeWidth: 3 },
+    md: { radius: 80, strokeWidth: 4 },
+    lg: { radius: 120, strokeWidth: 6 }
+  };
+  
+  const currentSize = sizes[size];
+  const circumference = 2 * Math.PI * currentSize.radius;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
@@ -41,8 +48,8 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning }: TimerCircl
   return (
     <div className="relative">
       <svg
-        width={radius * 2 + 40}
-        height={radius * 2 + 40}
+        width={currentSize.radius * 2 + 40}
+        height={currentSize.radius * 2 + 40}
         className={`transform -rotate-90 transition-all duration-300 ${
           isRunning ? 'pulse-glow' : ''
         }`}
@@ -52,9 +59,9 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning }: TimerCircl
       >
         {/* Background circle */}
         <circle
-          cx={radius + 20}
-          cy={radius + 20}
-          r={radius}
+          cx={currentSize.radius + 20}
+          cy={currentSize.radius + 20}
+          r={currentSize.radius}
           stroke="hsl(var(--border))"
           strokeWidth="3"
           fill="transparent"
@@ -63,11 +70,11 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning }: TimerCircl
         
         {/* Progress circle */}
         <circle
-          cx={radius + 20}
-          cy={radius + 20}
-          r={radius}
+          cx={currentSize.radius + 20}
+          cy={currentSize.radius + 20}
+          r={currentSize.radius}
           stroke={getCircleColor(mode)}
-          strokeWidth="6"
+          strokeWidth={currentSize.strokeWidth}
           fill="transparent"
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -80,9 +87,9 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning }: TimerCircl
         
         {/* Inner glow effect */}
         <circle
-          cx={radius + 20}
-          cy={radius + 20}
-          r={radius - 10}
+          cx={currentSize.radius + 20}
+          cy={currentSize.radius + 20}
+          r={currentSize.radius - 10}
           stroke={getGlowColor(mode)}
           strokeWidth="1"
           fill="transparent"
@@ -94,11 +101,17 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning }: TimerCircl
       
       {/* Center content */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="glass rounded-full p-8 text-center">
-          <div className="text-sm font-medium text-muted-foreground">
+        <div className={`glass rounded-full text-center ${
+          size === 'sm' ? 'p-2' : size === 'md' ? 'p-4' : 'p-8'
+        }`}>
+          <div className={`font-medium text-muted-foreground ${
+            size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-sm'
+          }`}>
             {mode === 'focus' ? '🎯' : '☕'}
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className={`mt-1 text-muted-foreground ${
+            size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-xs'
+          }`}>
             {Math.round(progress)}%
           </div>
         </div>
