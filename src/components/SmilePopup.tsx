@@ -21,34 +21,44 @@ interface SmilePopupProps {
   customImage?: string;
 }
 
-// Mock quotes for the demo
-const motivationalQuotes: Quote[] = [
-  {
-    id: '1',
-    text: 'The secret of getting ahead is getting started.',
-    author: 'Mark Twain'
-  },
-  {
-    id: '2',
-    text: 'Success is not final, failure is not fatal: it is the courage to continue that counts.',
-    author: 'Winston Churchill'
-  },
-  {
-    id: '3',
-    text: 'The way to get started is to quit talking and begin doing.',
-    author: 'Walt Disney'
-  },
-  {
-    id: '4',
-    text: 'Don\'t let yesterday take up too much of today.',
-    author: 'Will Rogers'
-  },
-  {
-    id: '5',
-    text: 'It is during our darkest moments that we must focus to see the light.',
-    author: 'Aristotle'
+// Get quotes from localStorage or use minimal defaults
+const getStoredQuotes = (): Quote[] => {
+  const stored = localStorage.getItem('stored_quotes');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
   }
-];
+  return [
+    {
+      id: '1',
+      text: 'The secret of getting ahead is getting started.',
+      author: 'Mark Twain'
+    },
+    {
+      id: '2',
+      text: 'Success is not final, failure is not fatal: it is the courage to continue that counts.',
+      author: 'Winston Churchill'
+    },
+    {
+      id: '3',
+      text: 'The way to get started is to quit talking and begin doing.',
+      author: 'Walt Disney'
+    },
+    {
+      id: '4',
+      text: 'Don\'t be afraid to give up the good to go for the great.',
+      author: 'John D. Rockefeller'
+    },
+    {
+      id: '5',
+      text: 'It is during our darkest moments that we must focus to see the light.',
+      author: 'Aristotle'
+    }
+  ];
+};
 
 const CelebrationEffects = ({ isVisible, sessionType }: { isVisible: boolean; sessionType: string }) => {
   if (!isVisible) return null;
@@ -89,9 +99,10 @@ const SmilePopup: React.FC<SmilePopupProps> = ({
   useEffect(() => {
     if (isOpen) {
       setIsLoading(true);
-      // Simulate API call for contextual quote
+      // Get quotes from storage
       setTimeout(() => {
-        const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+        const quotes = getStoredQuotes();
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
         setQuote(randomQuote);
         setIsLoading(false);
       }, 1000);

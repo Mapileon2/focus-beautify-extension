@@ -19,11 +19,25 @@ interface GeminiModel {
 
 const GEMINI_MODELS: GeminiModel[] = [
   {
+    id: 'gemini-2.0-flash-exp',
+    name: 'Gemini 2.0 Flash (Experimental)',
+    inputTokens: 1000000,
+    outputTokens: 8192,
+    description: 'Latest experimental model with enhanced capabilities'
+  },
+  {
     id: 'gemini-1.5-flash',
     name: 'Gemini 1.5 Flash',
     inputTokens: 1000000,
     outputTokens: 8192,
     description: 'Fast and efficient for most tasks'
+  },
+  {
+    id: 'gemini-1.5-flash-8b',
+    name: 'Gemini 1.5 Flash-8B',
+    inputTokens: 1000000,
+    outputTokens: 8192,
+    description: 'Optimized version with 8B parameters'
   },
   {
     id: 'gemini-1.5-pro',
@@ -33,11 +47,32 @@ const GEMINI_MODELS: GeminiModel[] = [
     description: 'Advanced reasoning and complex tasks'
   },
   {
+    id: 'gemini-1.5-pro-exp-0827',
+    name: 'Gemini 1.5 Pro (Experimental)',
+    inputTokens: 2000000,
+    outputTokens: 8192,
+    description: 'Latest experimental Pro model'
+  },
+  {
     id: 'gemini-1.0-pro',
     name: 'Gemini 1.0 Pro',
     inputTokens: 30720,
     outputTokens: 2048,
     description: 'Balanced performance and speed'
+  },
+  {
+    id: 'gemini-1.0-pro-vision',
+    name: 'Gemini 1.0 Pro Vision',
+    inputTokens: 12288,
+    outputTokens: 4096,
+    description: 'Optimized for image and text understanding'
+  },
+  {
+    id: 'gemini-pro',
+    name: 'Gemini Pro',
+    inputTokens: 30720,
+    outputTokens: 2048,
+    description: 'General purpose model for text tasks'
   }
 ];
 
