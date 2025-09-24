@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FocusTimer } from './FocusTimer';
-import { QuotesDashboard } from './QuotesDashboard';
+import { EnhancedQuotesDashboard } from './EnhancedQuotesDashboard';
 import { SessionAnalytics } from './SessionAnalytics';
 import { AiAssistant } from './AiAssistant';
 import { UserProfile } from './UserProfile';
@@ -28,7 +28,7 @@ export function Dashboard({ className }: DashboardProps) {
 
   const tabs = [
     { id: 'timer', label: 'Focus Timer', icon: Timer, component: FocusTimer },
-    { id: 'quotes', label: 'Inspiration', icon: Quote, component: QuotesDashboard },
+    { id: 'quotes', label: 'Inspiration', icon: Quote, component: EnhancedQuotesDashboard },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, component: SessionAnalytics },
     { id: 'ai', label: 'AI Assistant', icon: Bot, component: AiAssistant },
     { id: 'profile', label: 'Profile', icon: User, component: UserProfile },

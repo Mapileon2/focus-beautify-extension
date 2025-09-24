@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key } from 'lucide-react';
+import { GeminiAISettings } from './GeminiAISettings';
 
 interface SmilePopupSettings {
   enabled: boolean;
@@ -72,8 +73,9 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="timer" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="timer">Timer</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="smile">Smile Popup</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
@@ -113,6 +115,11 @@ export function Settings() {
               </div>
             </div>
           </Card>
+        </TabsContent>
+
+        {/* AI Settings */}
+        <TabsContent value="ai" className="space-y-6">
+          <GeminiAISettings />
         </TabsContent>
 
         {/* Notifications */}

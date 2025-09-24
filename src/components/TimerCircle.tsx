@@ -101,16 +101,16 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning, size = 'lg' 
       
       {/* Center content */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className={`glass rounded-full text-center ${
-          size === 'sm' ? 'p-2' : size === 'md' ? 'p-4' : 'p-8'
+        <div className={`glass rounded-full text-center flex flex-col items-center justify-center ${
+          size === 'sm' ? 'p-2 w-16 h-16' : size === 'md' ? 'p-4 w-24 h-24' : 'p-8 w-32 h-32'
         }`}>
           <div className={`font-medium text-muted-foreground ${
-            size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-sm'
+            size === 'sm' ? 'text-xs' : size === 'md' ? 'text-sm' : 'text-base'
           }`}>
             {mode === 'focus' ? '🎯' : '☕'}
           </div>
           <div className={`mt-1 text-muted-foreground ${
-            size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-xs'
+            size === 'sm' ? 'text-xs' : size === 'md' ? 'text-xs' : 'text-sm'
           }`}>
             {Math.round(progress)}%
           </div>
