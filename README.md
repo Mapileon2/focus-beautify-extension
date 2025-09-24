@@ -59,6 +59,7 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Google Gemini API (for AI features and dynamic model fetching)
 
 ## How can I deploy this project?
 

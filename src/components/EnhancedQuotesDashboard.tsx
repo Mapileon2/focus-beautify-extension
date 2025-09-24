@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Heart, Sparkles, Download, Share, Trash2, Search, Filter, Edit3, Plus, Bot, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { generateGeminiResponse } from '@/lib/gemini';
 
 interface Quote {
   id: string;
@@ -22,35 +23,9 @@ interface Quote {
 }
 
 export function EnhancedQuotesDashboard() {
-  const [quotes, setQuotes] = useState<Quote[]>([
-    {
-      id: '1',
-      text: 'The only way to do great work is to love what you do.',
-      author: 'Steve Jobs',
-      category: 'Motivation',
-      isFavorite: true,
-      isAiGenerated: false,
-      createdAt: new Date('2024-01-15')
-    },
-    {
-      id: '2', 
-      text: 'Focus is not just about what you concentrate on, but what you choose to ignore.',
-      author: 'AI Assistant',
-      category: 'Focus',
-      isFavorite: false,
-      isAiGenerated: true,
-      createdAt: new Date('2024-02-01')
-    },
-    {
-      id: '3',
-      text: 'Success is the sum of small efforts repeated day in and day out.',
-      author: 'Robert Collier',
-      category: 'Success',
-      isFavorite: true,
-      isAiGenerated: false,
-      createdAt: new Date('2024-01-20')
-    }
-  ]);
+  const [quotes, setQuotes] = useState<Quote[]>(
+    []
+  );
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -60,7 +35,27 @@ export function EnhancedQuotesDashboard() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  
+  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
+  const [geminiModel, setGeminiModel] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load Gemini API key and model from local storage
+    const storedApiKey = localStorage.getItem('geminiApiKey');
+    const storedModel = localStorage.getItem('geminiModel');
+    setGeminiApiKey(storedApiKey);
+    setGeminiModel(storedModel);
+
+    const handleStorageChange = () => {
+      setGeminiApiKey(localStorage.getItem('geminiApiKey'));
+      setGeminiModel(localStorage.getItem('geminiModel'));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   const { toast } = useToast();
 
   const categories = ['all', 'favorites', ...Array.from(new Set(quotes.map(q => q.category)))];
@@ -139,10 +134,10 @@ export function EnhancedQuotesDashboard() {
     const apiKey = localStorage.getItem('gemini_api_key');
     const model = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
 
-    if (!apiKey) {
+    if (!apiKey || !model) {
       toast({
-        title: "API Key Missing",
-        description: "Please configure your Gemini API key in Settings first.",
+        title: "API Key or Model Missing",
+        description: "Please configure your Gemini API key and select a model in Settings first.",
         variant: "destructive"
       });
       return;
@@ -151,32 +146,11 @@ export function EnhancedQuotesDashboard() {
     setIsGenerating(true);
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Generate an inspirational quote based on this prompt: "${customPrompt}". Return only the quote text without quotes, followed by a line break, then "— [Author Name]" where Author Name should be an appropriate fictional or real author that fits the quote's style and theme.`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.8,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 150,
-          }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate quote');
-      }
-
-      const data = await response.json();
-      const generatedText = data.candidates[0].content.parts[0].text;
+      const generatedText = await generateGeminiResponse(
+        `Generate an inspirational quote based on this prompt: "${customPrompt}". Return only the quote text without quotes, followed by a line break, then "— [Author Name]" where Author Name should be an appropriate fictional or real author that fits the quote's style and theme.`,
+        apiKey,
+        model
+      );
       
       // Parse the response to extract quote and author
       const lines = generatedText.trim().split('\n');

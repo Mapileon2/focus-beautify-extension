@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Send, Sparkles, Lightbulb, Target, Clock, MessageCircle } from 'lucide-react';
+import { generateGeminiResponse } from '@/lib/gemini';
 
 interface Message {
   id: string;
@@ -28,6 +29,26 @@ export function AiAssistant() {
   
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
+  const [geminiModel, setGeminiModel] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load Gemini API key and model from local storage
+    const storedApiKey = localStorage.getItem('geminiApiKey');
+    const storedModel = localStorage.getItem('geminiModel');
+    setGeminiApiKey(storedApiKey);
+    setGeminiModel(storedModel);
+
+    const handleStorageChange = () => {
+      setGeminiApiKey(localStorage.getItem('geminiApiKey'));
+      setGeminiModel(localStorage.getItem('geminiModel'));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const quickSuggestions = [
     'How can I improve my focus?',
@@ -100,6 +121,11 @@ export function AiAssistant() {
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
+    if (!geminiApiKey || !geminiModel) {
+      alert('Please set your Gemini API key and select a model in the AI settings.');
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputMessage,
@@ -111,12 +137,31 @@ export function AiAssistant() {
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse = getAiResponse(inputMessage);
+    try {
+      const aiResponseContent = await generateGeminiResponse(inputMessage, geminiApiKey, geminiModel);
+      const aiResponse: Message = {
+        id: Date.now().toString(),
+        content: aiResponseContent,
+        sender: 'ai',
+        timestamp: new Date(),
+        type: 'tip' // Default type, can be improved with AI response analysis
+      };
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error generating Gemini response:', error);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content: 'Sorry, I could not generate a response. Please check your API key and model selection.',
+          sender: 'ai',
+          timestamp: new Date(),
+          type: 'encouragement'
+        }
+      ]);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 2000);
+    }
   };
 
   const sendQuickMessage = (suggestion: string) => {
