@@ -21,6 +21,7 @@ export interface GeminiModel {
   inputTokenLimit: number;
   outputTokenLimit: number;
   version: string;
+  id: string; // Added id property
   // Add other properties if needed from the API response
 }
 

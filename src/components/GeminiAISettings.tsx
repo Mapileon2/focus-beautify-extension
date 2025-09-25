@@ -10,14 +10,6 @@ import { CheckCircle, XCircle, Sparkles, Key, Zap, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { fetchGeminiModels, GeminiModel } from '@/lib/gemini';
 
-interface GeminiModel {
-  id: string;
-  name: string;
-  inputTokens: number;
-  outputTokens: number;
-  description: string;
-}
-
 // Remove the hardcoded GEMINI_MODELS array
 // const GEMINI_MODELS: GeminiModel[] = [
 //   {
@@ -258,7 +250,7 @@ export function GeminiAISettings() {
               <SelectContent>
                 {availableModels.length > 0 ? (
                   availableModels.map(model => (
-                    <SelectItem key={model.name} value={model.name}>
+                    <SelectItem key={model.id} value={model.name}>
                       <div className="flex flex-col">
                         <span className="font-medium">{model.displayName}</span>
                         <span className="text-xs text-muted-foreground">{model.description}</span>
