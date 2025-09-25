@@ -24,7 +24,7 @@ interface DashboardProps {
 
 export function Dashboard({ className }: DashboardProps) {
   const [activeTab, setActiveTab] = useState('timer');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Default to open for better UX
 
   const tabs = [
     { id: 'timer', label: 'Focus Timer', icon: Timer, component: FocusTimer },
@@ -123,13 +123,27 @@ export function Dashboard({ className }: DashboardProps) {
           <main className="h-screen overflow-auto">
             <div className="p-4 lg:p-8">
               {/* Page Header */}
-              <div className="hidden lg:block mb-6">
-                <h2 className="text-3xl font-light text-foreground">
-                  {activeTabConfig?.label}
-                </h2>
-                <p className="text-muted-foreground">
-                  {getTabDescription(activeTab)}
-                </p>
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-3xl font-light text-foreground">
+                      {activeTabConfig?.label}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {getTabDescription(activeTab)}
+                    </p>
+                  </div>
+                  <div className="lg:hidden">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSidebarOpen(true)}
+                    >
+                      <Menu className="h-4 w-4 mr-2" />
+                      Menu
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               {/* Tab Content */}

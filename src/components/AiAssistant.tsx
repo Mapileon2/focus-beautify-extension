@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Send, Sparkles, Lightbulb, Target, Clock, MessageCircle } from 'lucide-react';
 import { generateGeminiResponse } from '@/lib/gemini';
+import { useGeminiSettings } from '@/hooks/useGeminiSettings';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -29,26 +31,9 @@ export function AiAssistant() {
   
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
-  const [geminiModel, setGeminiModel] = useState<string | null>(null);
+  const { settings: geminiSettings } = useGeminiSettings();
 
-  useEffect(() => {
-    // Load Gemini API key and model from local storage
-    const storedApiKey = localStorage.getItem('geminiApiKey');
-    const storedModel = localStorage.getItem('geminiModel');
-    setGeminiApiKey(storedApiKey);
-    setGeminiModel(storedModel);
-
-    const handleStorageChange = () => {
-      setGeminiApiKey(localStorage.getItem('geminiApiKey'));
-      setGeminiModel(localStorage.getItem('geminiModel'));
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  // No need for useEffect to load settings - handled by useGeminiSettings hook
 
   const quickSuggestions = [
     'How can I improve my focus?',
@@ -121,8 +106,12 @@ export function AiAssistant() {
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
-    if (!geminiApiKey || !geminiModel) {
-      alert('Please set your Gemini API key and select a model in the AI settings.');
+    if (!geminiSettings.isConfigured) {
+      toast({
+        title: "AI Not Configured",
+        description: "Please set your Gemini API key and select a model in the AI settings.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -138,7 +127,11 @@ export function AiAssistant() {
     setIsTyping(true);
 
     try {
-      const aiResponseContent = await generateGeminiResponse(inputMessage, geminiApiKey, geminiModel);
+      console.log('Debug - API Key:', geminiSettings.apiKey ? 'Present' : 'Missing');
+      console.log('Debug - Model:', geminiSettings.model);
+      console.log('Debug - Is Configured:', geminiSettings.isConfigured);
+      
+      const aiResponseContent = await generateGeminiResponse(geminiSettings.apiKey!, inputMessage, geminiSettings.model!);
       const aiResponse: Message = {
         id: Date.now().toString(),
         content: aiResponseContent,
@@ -149,6 +142,7 @@ export function AiAssistant() {
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       console.error('Error generating Gemini response:', error);
+      console.error('Full error details:', error);
       setMessages(prev => [
         ...prev,
         {

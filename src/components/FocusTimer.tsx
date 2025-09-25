@@ -9,6 +9,7 @@ import { SessionStats } from './SessionStats';
 import { TaskList } from './TaskList';
 import SmilePopup from './SmilePopup';
 import { useToast } from '@/hooks/use-toast';
+import { useSmilePopupSettings } from '@/hooks/useChromeStorage';
 
 export type TimerMode = 'focus' | 'break' | 'longBreak';
 
@@ -35,6 +36,9 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
   const { toast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
   const [showSmilePopup, setShowSmilePopup] = useState(false);
+  
+  // Get smile popup settings from Chrome storage
+  const { value: smilePopupSettings } = useSmilePopupSettings();
   const [settings, setSettings] = useState<TimerSettings>({
     focusTime: 25 * 60, // 25 minutes
     breakTime: 5 * 60,  // 5 minutes
@@ -248,6 +252,7 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
           onStartBreak={handleStartBreak}
           sessionType={timer.mode}
           sessionCount={timer.totalSessions}
+          customImage={smilePopupSettings.customImage}
         />
       </div>
     );
@@ -375,6 +380,7 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
           onStartBreak={handleStartBreak}
           sessionType={timer.mode}
           sessionCount={timer.totalSessions}
+          customImage={smilePopupSettings.customImage}
         />
       </div>
     </div>

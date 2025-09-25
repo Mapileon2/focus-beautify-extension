@@ -15,4 +15,14 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: "dist",
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        dashboard: path.resolve(__dirname, "public/dashboard.html"),
+        fullapp: path.resolve(__dirname, "public/fullapp.html"),
+      },
+    },
+  },
 }));

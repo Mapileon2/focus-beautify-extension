@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -7,8 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key } from 'lucide-react';
+import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle } from 'lucide-react';
 import { GeminiAISettings } from './GeminiAISettings';
+import { ImageUpload } from './ImageUpload';
+import { useSmilePopupSettings, useAppSettings } from '@/hooks/useChromeStorage';
+import { useToast } from '@/hooks/use-toast';
+import { clearChromeStorage, checkStorageHealth } from '@/utils/storageCleanup';
 
 interface SmilePopupSettings {
   enabled: boolean;
@@ -35,40 +39,107 @@ interface AppSettings {
 }
 
 export function Settings() {
-  const [settings, setSettings] = useState<AppSettings>({
-    theme: 'system',
-    notifications: true,
-    soundEnabled: true,
-    autoStartBreaks: false,
-    autoStartPomodoros: false,
-    smilePopup: {
-      enabled: true,
-      showQuotes: true,
-      showCelebration: true,
-      customImage: '',
-      animationIntensity: 'medium',
-      quotesSource: 'motivational',
-      autoClose: false,
-      closeDelay: 5
-    },
-    privacy: {
-      dataCollection: true,
-      analytics: true,
-    },
-  });
+  const { toast } = useToast();
+  
+  // Use Chrome storage hooks
+  const {
+    value: smilePopupSettings,
+    setValue: setSmilePopupSettings,
+    isLoading: smilePopupLoading,
+    error: smilePopupError
+  } = useSmilePopupSettings();
 
-  const updateSmilePopupSetting = <K extends keyof SmilePopupSettings>(
+  const {
+    value: appSettings,
+    setValue: setAppSettings,
+    isLoading: appSettingsLoading,
+    error: appSettingsError
+  } = useAppSettings();
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const updateSmilePopupSetting = <K extends keyof typeof smilePopupSettings>(
     key: K, 
-    value: SmilePopupSettings[K]
+    value: typeof smilePopupSettings[K]
   ) => {
-    setSettings(prev => ({
-      ...prev,
-      smilePopup: {
-        ...prev.smilePopup,
-        [key]: value
-      }
-    }));
+    const newSettings = {
+      ...smilePopupSettings,
+      [key]: value
+    };
+    setSmilePopupSettings(newSettings);
+    setHasUnsavedChanges(false); // Auto-save with Chrome storage
   };
+
+  const updateAppSetting = <K extends keyof typeof appSettings>(
+    key: K,
+    value: typeof appSettings[K]
+  ) => {
+    const newSettings = {
+      ...appSettings,
+      [key]: value
+    };
+    setAppSettings(newSettings);
+    setHasUnsavedChanges(false); // Auto-save with Chrome storage
+  };
+
+  const resetToDefaults = async () => {
+    try {
+      await setSmilePopupSettings({
+        enabled: true,
+        showQuotes: true,
+        showCelebration: true,
+        customImage: '',
+        animationIntensity: 'medium',
+        quotesSource: 'motivational',
+        autoClose: false,
+        closeDelay: 5,
+      });
+
+      await setAppSettings({
+        theme: 'system',
+        notifications: true,
+        soundEnabled: true,
+        autoStartBreaks: false,
+        autoStartPomodoros: false,
+        privacy: {
+          dataCollection: true,
+          analytics: true,
+        },
+      });
+
+      toast({
+        title: "Settings reset",
+        description: "All settings have been reset to defaults",
+      });
+    } catch (error) {
+      toast({
+        title: "Reset failed",
+        description: "Failed to reset settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Show loading state
+  if (smilePopupLoading || appSettingsLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Show error state
+  if (smilePopupError || appSettingsError) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-destructive">Failed to load settings: {smilePopupError || appSettingsError}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Reload
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,8 +168,8 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.autoStartBreaks}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoStartBreaks: checked }))}
+                  checked={appSettings.autoStartBreaks}
+                  onCheckedChange={(checked) => updateAppSetting('autoStartBreaks', checked)}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -109,8 +180,8 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.autoStartPomodoros}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, autoStartPomodoros: checked }))}
+                  checked={appSettings.autoStartPomodoros}
+                  onCheckedChange={(checked) => updateAppSetting('autoStartPomodoros', checked)}
                 />
               </div>
             </div>
@@ -138,8 +209,8 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.notifications}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, notifications: checked }))}
+                  checked={appSettings.notifications}
+                  onCheckedChange={(checked) => updateAppSetting('notifications', checked)}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -150,8 +221,8 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.soundEnabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, soundEnabled: checked }))}
+                  checked={appSettings.soundEnabled}
+                  onCheckedChange={(checked) => updateAppSetting('soundEnabled', checked)}
                 />
               </div>
             </div>
@@ -175,7 +246,7 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.smilePopup.enabled}
+                  checked={smilePopupSettings.enabled}
                   onCheckedChange={(checked) => updateSmilePopupSetting('enabled', checked)}
                 />
               </div>
@@ -190,9 +261,9 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.smilePopup.showQuotes}
+                  checked={smilePopupSettings.showQuotes}
                   onCheckedChange={(checked) => updateSmilePopupSetting('showQuotes', checked)}
-                  disabled={!settings.smilePopup.enabled}
+                  disabled={!smilePopupSettings.enabled}
                 />
               </div>
 
@@ -204,40 +275,20 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.smilePopup.showCelebration}
+                  checked={smilePopupSettings.showCelebration}
                   onCheckedChange={(checked) => updateSmilePopupSetting('showCelebration', checked)}
-                  disabled={!settings.smilePopup.enabled}
+                  disabled={!smilePopupSettings.enabled}
                 />
               </div>
 
               <Separator />
 
-              <div className="space-y-3">
-                <Label>Custom Motivation Image</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter image URL or upload"
-                    value={settings.smilePopup.customImage}
-                    onChange={(e) => updateSmilePopupSetting('customImage', e.target.value)}
-                    disabled={!settings.smilePopup.enabled}
-                  />
-                  <Button variant="outline" size="icon" disabled={!settings.smilePopup.enabled}>
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                </div>
-                {settings.smilePopup.customImage && (
-                  <div className="mt-2">
-                    <img 
-                      src={settings.smilePopup.customImage} 
-                      alt="Preview" 
-                      className="h-20 w-20 object-cover rounded border"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+              <ImageUpload
+                currentImage={smilePopupSettings.customImage}
+                onImageChange={(imageData) => updateSmilePopupSetting('customImage', imageData)}
+                disabled={!smilePopupSettings.enabled}
+                maxSizeKB={100}
+              />
 
               <div className="space-y-3">
                 <Label>Animation Intensity</Label>
@@ -245,10 +296,10 @@ export function Settings() {
                   {(['low', 'medium', 'high'] as const).map((intensity) => (
                     <Button
                       key={intensity}
-                      variant={settings.smilePopup.animationIntensity === intensity ? 'default' : 'outline'}
+                      variant={smilePopupSettings.animationIntensity === intensity ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => updateSmilePopupSetting('animationIntensity', intensity)}
-                      disabled={!settings.smilePopup.enabled}
+                      disabled={!smilePopupSettings.enabled}
                       className="capitalize"
                     >
                       <Sparkles className="mr-1 h-3 w-3" />
@@ -264,10 +315,10 @@ export function Settings() {
                   {(['motivational', 'productivity', 'custom'] as const).map((source) => (
                     <Button
                       key={source}
-                      variant={settings.smilePopup.quotesSource === source ? 'default' : 'outline'}
+                      variant={smilePopupSettings.quotesSource === source ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => updateSmilePopupSetting('quotesSource', source)}
-                      disabled={!settings.smilePopup.enabled || !settings.smilePopup.showQuotes}
+                      disabled={!smilePopupSettings.enabled || !smilePopupSettings.showQuotes}
                       className="capitalize"
                     >
                       {source}
@@ -286,22 +337,22 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.smilePopup.autoClose}
+                  checked={smilePopupSettings.autoClose}
                   onCheckedChange={(checked) => updateSmilePopupSetting('autoClose', checked)}
-                  disabled={!settings.smilePopup.enabled}
+                  disabled={!smilePopupSettings.enabled}
                 />
               </div>
 
-              {settings.smilePopup.autoClose && (
+              {smilePopupSettings.autoClose && (
                 <div className="space-y-2">
                   <Label>Auto Close Delay (seconds)</Label>
                   <Input
                     type="number"
                     min="1"
                     max="30"
-                    value={settings.smilePopup.closeDelay}
+                    value={smilePopupSettings.closeDelay}
                     onChange={(e) => updateSmilePopupSetting('closeDelay', parseInt(e.target.value) || 5)}
-                    disabled={!settings.smilePopup.enabled}
+                    disabled={!smilePopupSettings.enabled}
                   />
                 </div>
               )}
@@ -325,11 +376,11 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.privacy.dataCollection}
-                  onCheckedChange={(checked) => setSettings(prev => ({
-                    ...prev,
-                    privacy: { ...prev.privacy, dataCollection: checked }
-                  }))}
+                  checked={appSettings.privacy.dataCollection}
+                  onCheckedChange={(checked) => updateAppSetting('privacy', {
+                    ...appSettings.privacy,
+                    dataCollection: checked
+                  })}
                 />
               </div>
               <div className="flex items-center justify-between">
@@ -340,11 +391,11 @@ export function Settings() {
                   </p>
                 </div>
                 <Switch
-                  checked={settings.privacy.analytics}
-                  onCheckedChange={(checked) => setSettings(prev => ({
-                    ...prev,
-                    privacy: { ...prev.privacy, analytics: checked }
-                  }))}
+                  checked={appSettings.privacy.analytics}
+                  onCheckedChange={(checked) => updateAppSetting('privacy', {
+                    ...appSettings.privacy,
+                    analytics: checked
+                  })}
                 />
               </div>
             </div>
@@ -364,6 +415,29 @@ export function Settings() {
                 <Key className="mr-2 h-4 w-4" />
                 Manage API Keys
               </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={async () => {
+                  try {
+                    await clearChromeStorage();
+                    toast({
+                      title: "Storage Cleared",
+                      description: "All extension data has been cleared. Please reconfigure your settings.",
+                    });
+                    window.location.reload();
+                  } catch (error) {
+                    toast({
+                      title: "Clear Failed",
+                      description: "Failed to clear storage. Try reloading the extension.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Clear Storage (Fix Quota Issues)
+              </Button>
               <Button variant="destructive" className="w-full justify-start">
                 <Shield className="mr-2 h-4 w-4" />
                 Delete All Data
@@ -375,8 +449,13 @@ export function Settings() {
 
       {/* Save Settings */}
       <div className="flex justify-end gap-3">
-        <Button variant="outline">Reset to Defaults</Button>
-        <Button variant="timer">Save Settings</Button>
+        <Button variant="outline" onClick={resetToDefaults}>
+          Reset to Defaults
+        </Button>
+        <Button variant="timer" disabled={!hasUnsavedChanges}>
+          <Save className="mr-2 h-4 w-4" />
+          {hasUnsavedChanges ? 'Save Settings' : 'Settings Saved'}
+        </Button>
       </div>
     </div>
   );

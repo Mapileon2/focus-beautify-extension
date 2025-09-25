@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Heart, Sparkles, Download, Share, Trash2, Search, Filter, Edit3, Plus, Bot, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateGeminiResponse } from '@/lib/gemini';
+import { useGeminiSettings } from '@/hooks/useGeminiSettings';
 
 interface Quote {
   id: string;
@@ -35,19 +36,11 @@ export function EnhancedQuotesDashboard() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState<string | null>(null);
-  const [geminiModel, setGeminiModel] = useState<string | null>(null);
+  const { settings: geminiSettings } = useGeminiSettings();
 
   useEffect(() => {
-    // Load Gemini API key and model from local storage
-    const storedApiKey = localStorage.getItem('geminiApiKey');
-    const storedModel = localStorage.getItem('geminiModel');
-    setGeminiApiKey(storedApiKey);
-    setGeminiModel(storedModel);
-
     const handleStorageChange = () => {
-      setGeminiApiKey(localStorage.getItem('geminiApiKey'));
-      setGeminiModel(localStorage.getItem('geminiModel'));
+      // This will be handled by the useGeminiSettings hook
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -131,12 +124,9 @@ export function EnhancedQuotesDashboard() {
       return;
     }
 
-    const apiKey = localStorage.getItem('gemini_api_key');
-    const model = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
-
-    if (!apiKey || !model) {
+    if (!geminiSettings.isConfigured) {
       toast({
-        title: "API Key or Model Missing",
+        title: "AI Not Configured",
         description: "Please configure your Gemini API key and select a model in Settings first.",
         variant: "destructive"
       });
@@ -147,9 +137,9 @@ export function EnhancedQuotesDashboard() {
 
     try {
       const generatedText = await generateGeminiResponse(
+        geminiSettings.apiKey!,
         `Generate an inspirational quote based on this prompt: "${customPrompt}". Return only the quote text without quotes, followed by a line break, then "— [Author Name]" where Author Name should be an appropriate fictional or real author that fits the quote's style and theme.`,
-        apiKey,
-        model
+        geminiSettings.model!
       );
       
       // Parse the response to extract quote and author
