@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => ({
         main: path.resolve(__dirname, "index.html"),
         dashboard: path.resolve(__dirname, "public/dashboard.html"),
         fullapp: path.resolve(__dirname, "public/fullapp.html"),
+        smilePopup: path.resolve(__dirname, "public/smile-popup.html"),
       },
     },
   },

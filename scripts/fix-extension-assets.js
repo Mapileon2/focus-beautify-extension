@@ -43,7 +43,13 @@ const fullappHtmlPath = path.join(distDir, 'fullapp.html');
 const fullappHtml = createHtmlTemplate('Focus Timer - Full App', 'fullapp');
 fs.writeFileSync(fullappHtmlPath, fullappHtml);
 
+// Update smile-popup.html
+const smilePopupHtmlPath = path.join(distDir, 'smile-popup.html');
+const smilePopupHtml = createHtmlTemplate('Focus Timer - Celebration!', 'smile-popup');
+fs.writeFileSync(smilePopupHtmlPath, smilePopupHtml);
+
 console.log('✅ Extension HTML files updated with correct asset references');
 console.log('📁 Updated files:');
 console.log('  - dashboard.html');
 console.log('  - fullapp.html');
+console.log('  - smile-popup.html');

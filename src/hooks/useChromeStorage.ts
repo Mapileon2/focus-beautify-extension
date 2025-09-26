@@ -126,6 +126,9 @@ export function useSmilePopupSettings() {
     quotesSource: 'motivational' as 'motivational' | 'productivity' | 'custom',
     autoClose: false,
     closeDelay: 5,
+    showAsExternalWindow: false, // New option for external mini window
+    windowWidth: 400,
+    windowHeight: 300,
   }, 'local'); // Use local storage for larger data like images
 }
 

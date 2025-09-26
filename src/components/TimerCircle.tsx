@@ -46,7 +46,7 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning, size = 'lg' 
   };
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center justify-center">
       <svg
         width={currentSize.radius * 2 + 40}
         height={currentSize.radius * 2 + 40}
@@ -56,6 +56,7 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning, size = 'lg' 
         style={{
           filter: `drop-shadow(0 0 20px ${getGlowColor(mode)}40)`,
         }}
+        viewBox={`0 0 ${currentSize.radius * 2 + 40} ${currentSize.radius * 2 + 40}`}
       >
         {/* Background circle */}
         <circle

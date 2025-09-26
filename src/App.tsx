@@ -7,6 +7,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import { ChromeExtensionMain } from "./pages/ChromeExtensionMain";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ExternalSmilePopupPage } from "./pages/ExternalSmilePopupPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/index.html" element={<ChromeExtensionMain />} />
             <Route path="/fullapp" element={<Index />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/smile-popup" element={<ExternalSmilePopupPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -39,6 +39,11 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
   
   // Get smile popup settings from Chrome storage
   const { value: smilePopupSettings } = useSmilePopupSettings();
+  
+  // Debug: Log settings when they change
+  useEffect(() => {
+    console.log('Smile popup settings updated:', smilePopupSettings);
+  }, [smilePopupSettings]);
   const [settings, setSettings] = useState<TimerSettings>({
     focusTime: 25 * 60, // 25 minutes
     breakTime: 5 * 60,  // 5 minutes
@@ -153,6 +158,56 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
     nextSession();
   };
 
+  const openExternalSmilePopup = () => {
+    const width = smilePopupSettings.windowWidth || 400;
+    const height = smilePopupSettings.windowHeight || 300;
+    
+    console.log('Opening external popup with dimensions:', { width, height });
+    
+    // Calculate center position
+    const left = Math.round((screen.width - width) / 2);
+    const top = Math.round((screen.height - height) / 2);
+    
+    const params = new URLSearchParams({
+      sessionType: timer.mode,
+      sessionCount: timer.totalSessions.toString(),
+    });
+    
+    console.log('Popup params:', params.toString());
+    
+    if (typeof chrome !== 'undefined' && chrome.windows) {
+      console.log('Using Chrome windows API...');
+      const url = chrome.runtime.getURL(`smile-popup.html?${params.toString()}`);
+      console.log('Popup URL:', url);
+      
+      chrome.windows.create({
+        url,
+        type: 'popup',
+        width,
+        height,
+        left,
+        top,
+        focused: true,
+      }, (window) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to create window:', chrome.runtime.lastError);
+        } else {
+          console.log('Window created successfully:', window);
+        }
+      });
+    } else {
+      console.log('Chrome windows API not available, using fallback...');
+      // Fallback for development
+      const url = `/smile-popup?${params.toString()}`;
+      console.log('Fallback URL:', url);
+      window.open(
+        url,
+        'smilePopup',
+        `width=${width},height=${height},left=${left},top=${top},resizable=no,scrollbars=no,status=no,menubar=no,toolbar=no`
+      );
+    }
+  };
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -161,7 +216,19 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
         setTimer(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
       }, 1000);
     } else if (timer.timeLeft === 0) {
-      setShowSmilePopup(true);
+      console.log('Timer completed! Checking popup settings:', {
+        showAsExternalWindow: smilePopupSettings.showAsExternalWindow,
+        enabled: smilePopupSettings.enabled
+      });
+      
+      // Check if external window is enabled
+      if (smilePopupSettings.enabled && smilePopupSettings.showAsExternalWindow) {
+        console.log('Opening external smile popup...');
+        openExternalSmilePopup();
+      } else {
+        console.log('Opening inline smile popup...');
+        setShowSmilePopup(true);
+      }
     }
 
     return () => clearInterval(interval);
@@ -173,11 +240,11 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
     return (
       <div className="space-y-4">
         {/* Compact Timer Display */}
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center">
           <h2 className="text-sm font-medium text-muted-foreground mb-2">
             {getModeTitle(timer.mode)}
           </h2>
-          <div className="mb-4">
+          <div className="mb-4 flex justify-center">
             <TimerCircle
               timeLeft={timer.timeLeft}
               totalTime={getTimerDuration(timer.mode)}
@@ -186,10 +253,12 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
               size="sm"
             />
           </div>
-          <div className="timer-display-compact text-foreground mb-4">
+          <div className="timer-display-compact text-foreground mb-4 text-center">
             {formatTime(timer.timeLeft)}
           </div>
-          <Progress value={progress} className="h-1 mb-4" />
+          <div className="w-full">
+            <Progress value={progress} className="h-1 mb-4" />
+          </div>
         </div>
 
         {/* Compact Controls */}
@@ -295,7 +364,7 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
               </div>
 
               {/* Timer Display */}
-              <div className="mb-8">
+              <div className="mb-8 flex justify-center">
                 <div className="timer-display text-center text-foreground">
                   {formatTime(timer.timeLeft)}
                 </div>

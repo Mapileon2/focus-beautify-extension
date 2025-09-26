@@ -93,6 +93,9 @@ export function Settings() {
         quotesSource: 'motivational',
         autoClose: false,
         closeDelay: 5,
+        showAsExternalWindow: false,
+        windowWidth: 400,
+        windowHeight: 300,
       });
 
       await setAppSettings({
@@ -331,9 +334,102 @@ export function Settings() {
 
               <div className="flex items-center justify-between">
                 <div>
+                  <Label>Show as External Window</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Open celebration popup as a separate mini window outside Chrome
+                  </p>
+                </div>
+                <Switch
+                  checked={smilePopupSettings.showAsExternalWindow}
+                  onCheckedChange={(checked) => updateSmilePopupSetting('showAsExternalWindow', checked)}
+                  disabled={!smilePopupSettings.enabled}
+                />
+              </div>
+
+              {/* Test button for external popup */}
+              {smilePopupSettings.showAsExternalWindow && (
+                <div className="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const width = smilePopupSettings.windowWidth || 400;
+                      const height = smilePopupSettings.windowHeight || 300;
+                      const left = Math.round((screen.width - width) / 2);
+                      const top = Math.round((screen.height - height) / 2);
+                      
+                      if (typeof chrome !== 'undefined' && chrome.windows) {
+                        const url = chrome.runtime.getURL('smile-popup.html?sessionType=focus&sessionCount=1');
+                        chrome.windows.create({
+                          url,
+                          type: 'popup',
+                          width,
+                          height,
+                          left,
+                          top,
+                          focused: true,
+                        }, (window) => {
+                          if (chrome.runtime.lastError) {
+                            toast({
+                              title: "Test Failed",
+                              description: chrome.runtime.lastError.message,
+                              variant: "destructive",
+                            });
+                          } else {
+                            toast({
+                              title: "Test Successful",
+                              description: "External popup window opened!",
+                            });
+                          }
+                        });
+                      } else {
+                        toast({
+                          title: "Chrome API Not Available",
+                          description: "Windows API not accessible in this environment",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Test External Popup
+                  </Button>
+                </div>
+              )}
+
+              {smilePopupSettings.showAsExternalWindow && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Window Width (px)</Label>
+                    <Input
+                      type="number"
+                      min="300"
+                      max="800"
+                      value={smilePopupSettings.windowWidth}
+                      onChange={(e) => updateSmilePopupSetting('windowWidth', parseInt(e.target.value) || 400)}
+                      disabled={!smilePopupSettings.enabled}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Window Height (px)</Label>
+                    <Input
+                      type="number"
+                      min="200"
+                      max="600"
+                      value={smilePopupSettings.windowHeight}
+                      onChange={(e) => updateSmilePopupSetting('windowHeight', parseInt(e.target.value) || 300)}
+                      disabled={!smilePopupSettings.enabled}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
                   <Label>Auto Close Popup</Label>
                   <p className="text-sm text-muted-foreground">
-                    Automatically close popup after set time
+                    Automatically close popup after set time (works for both inline and external windows)
                   </p>
                 </div>
                 <Switch
@@ -344,16 +440,74 @@ export function Settings() {
               </div>
 
               {smilePopupSettings.autoClose && (
-                <div className="space-y-2">
-                  <Label>Auto Close Delay (seconds)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={smilePopupSettings.closeDelay}
-                    onChange={(e) => updateSmilePopupSetting('closeDelay', parseInt(e.target.value) || 5)}
-                    disabled={!smilePopupSettings.enabled}
-                  />
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Auto Close Delay (seconds)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={smilePopupSettings.closeDelay}
+                      onChange={(e) => updateSmilePopupSetting('closeDelay', parseInt(e.target.value) || 5)}
+                      disabled={!smilePopupSettings.enabled}
+                    />
+                  </div>
+                  
+                  {/* Test auto-close functionality */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const width = smilePopupSettings.windowWidth || 400;
+                        const height = smilePopupSettings.windowHeight || 300;
+                        const left = Math.round((screen.width - width) / 2);
+                        const top = Math.round((screen.height - height) / 2);
+                        
+                        if (typeof chrome !== 'undefined' && chrome.windows) {
+                          const url = chrome.runtime.getURL(`smile-popup.html?sessionType=focus&sessionCount=1&autoClose=true&closeDelay=${smilePopupSettings.closeDelay}`);
+                          chrome.windows.create({
+                            url,
+                            type: 'popup',
+                            width,
+                            height,
+                            left,
+                            top,
+                            focused: true,
+                          }, (window) => {
+                            if (chrome.runtime.lastError) {
+                              toast({
+                                title: "Test Failed",
+                                description: chrome.runtime.lastError.message,
+                                variant: "destructive",
+                              });
+                            } else {
+                              toast({
+                                title: "Auto-Close Test Started",
+                                description: `External popup will close in ${smilePopupSettings.closeDelay} seconds`,
+                              });
+                            }
+                          });
+                        } else {
+                          toast({
+                            title: "Chrome API Not Available",
+                            description: "Windows API not accessible in this environment",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      disabled={!smilePopupSettings.showAsExternalWindow}
+                    >
+                      Test Auto-Close (External)
+                    </Button>
+                    
+                    <div className="text-xs text-muted-foreground self-center">
+                      {smilePopupSettings.showAsExternalWindow 
+                        ? `Will close in ${smilePopupSettings.closeDelay}s` 
+                        : 'Enable external window to test'
+                      }
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
