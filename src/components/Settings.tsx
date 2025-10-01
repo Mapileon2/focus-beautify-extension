@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -57,7 +57,7 @@ export function Settings() {
     error: appSettingsError
   } = useAppSettings();
 
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
 
   const updateSmilePopupSetting = <K extends keyof typeof smilePopupSettings>(
     key: K, 
@@ -68,7 +68,11 @@ export function Settings() {
       [key]: value
     };
     setSmilePopupSettings(newSettings);
-    setHasUnsavedChanges(false); // Auto-save with Chrome storage
+    // Settings auto-save with Chrome storage hooks
+    toast({
+      title: "Setting Updated",
+      description: "Your preference has been saved automatically.",
+    });
   };
 
   const updateAppSetting = <K extends keyof typeof appSettings>(
@@ -80,7 +84,11 @@ export function Settings() {
       [key]: value
     };
     setAppSettings(newSettings);
-    setHasUnsavedChanges(false); // Auto-save with Chrome storage
+    // Settings auto-save with Chrome storage hooks
+    toast({
+      title: "Setting Updated", 
+      description: "Your preference has been saved automatically.",
+    });
   };
 
   const resetToDefaults = async () => {
@@ -677,15 +685,15 @@ export function Settings() {
         </TabsContent>
       </Tabs>
 
-      {/* Save Settings */}
+      {/* Settings Actions */}
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={resetToDefaults}>
           Reset to Defaults
         </Button>
-        <Button variant="timer" disabled={!hasUnsavedChanges}>
-          <Save className="mr-2 h-4 w-4" />
-          {hasUnsavedChanges ? 'Save Settings' : 'Settings Saved'}
-        </Button>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Save className="h-4 w-4" />
+          Settings auto-save as you change them
+        </div>
       </div>
     </div>
   );
