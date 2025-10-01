@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle } from 'lucide-react';
 import { GeminiAISettings } from './GeminiAISettings';
 import { ImageUpload } from './ImageUpload';
-import { TimerDurationSettings } from './TimerDurationSettings';
+
 import { useSmilePopupSettings, useAppSettings } from '@/hooks/useChromeStorage';
 import { useToast } from '@/hooks/use-toast';
 import { clearChromeStorage, checkStorageHealth } from '@/utils/storageCleanup';
@@ -158,8 +158,6 @@ export function Settings() {
 
         {/* Timer Settings */}
         <TabsContent value="timer" className="space-y-6">
-          <TimerDurationSettings />
-          
           <Card className="glass p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
               <Timer className="h-5 w-5" />
