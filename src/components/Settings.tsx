@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle } from 'lucide-react';
 import { GeminiAISettings } from './GeminiAISettings';
 import { ImageUpload } from './ImageUpload';
+import { TimerDurationSettings } from './TimerDurationSettings';
 import { useSmilePopupSettings, useAppSettings } from '@/hooks/useChromeStorage';
 import { useToast } from '@/hooks/use-toast';
 import { clearChromeStorage, checkStorageHealth } from '@/utils/storageCleanup';
@@ -157,10 +158,12 @@ export function Settings() {
 
         {/* Timer Settings */}
         <TabsContent value="timer" className="space-y-6">
+          <TimerDurationSettings />
+          
           <Card className="glass p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
               <Timer className="h-5 w-5" />
-              Timer Configuration
+              Timer Behavior
             </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -404,8 +407,33 @@ export function Settings() {
                       type="number"
                       min="300"
                       max="800"
-                      value={smilePopupSettings.windowWidth}
-                      onChange={(e) => updateSmilePopupSetting('windowWidth', parseInt(e.target.value) || 400)}
+                      value={smilePopupSettings.windowWidth || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow any input during typing - no validation/clamping
+                        if (value === '') {
+                          updateSmilePopupSetting('windowWidth', '');
+                        } else {
+                          // Store the raw input value to allow natural typing
+                          updateSmilePopupSetting('windowWidth', value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (!value) {
+                          updateSmilePopupSetting('windowWidth', 400);
+                        } else {
+                          const numValue = parseInt(value);
+                          if (isNaN(numValue) || numValue < 300) {
+                            updateSmilePopupSetting('windowWidth', 400);
+                          } else if (numValue > 800) {
+                            updateSmilePopupSetting('windowWidth', 800);
+                          } else {
+                            updateSmilePopupSetting('windowWidth', numValue);
+                          }
+                        }
+                      }}
+                      placeholder="400"
                       disabled={!smilePopupSettings.enabled}
                     />
                   </div>
@@ -415,8 +443,33 @@ export function Settings() {
                       type="number"
                       min="200"
                       max="600"
-                      value={smilePopupSettings.windowHeight}
-                      onChange={(e) => updateSmilePopupSetting('windowHeight', parseInt(e.target.value) || 300)}
+                      value={smilePopupSettings.windowHeight || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow any input during typing - no validation/clamping
+                        if (value === '') {
+                          updateSmilePopupSetting('windowHeight', '');
+                        } else {
+                          // Store the raw input value to allow natural typing
+                          updateSmilePopupSetting('windowHeight', value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (!value) {
+                          updateSmilePopupSetting('windowHeight', 300);
+                        } else {
+                          const numValue = parseInt(value);
+                          if (isNaN(numValue) || numValue < 200) {
+                            updateSmilePopupSetting('windowHeight', 300);
+                          } else if (numValue > 600) {
+                            updateSmilePopupSetting('windowHeight', 600);
+                          } else {
+                            updateSmilePopupSetting('windowHeight', numValue);
+                          }
+                        }
+                      }}
+                      placeholder="300"
                       disabled={!smilePopupSettings.enabled}
                     />
                   </div>
@@ -447,8 +500,33 @@ export function Settings() {
                       type="number"
                       min="1"
                       max="30"
-                      value={smilePopupSettings.closeDelay}
-                      onChange={(e) => updateSmilePopupSetting('closeDelay', parseInt(e.target.value) || 5)}
+                      value={smilePopupSettings.closeDelay || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow any input during typing - no validation/clamping
+                        if (value === '') {
+                          updateSmilePopupSetting('closeDelay', '');
+                        } else {
+                          // Store the raw input value to allow natural typing
+                          updateSmilePopupSetting('closeDelay', value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (!value) {
+                          updateSmilePopupSetting('closeDelay', 5);
+                        } else {
+                          const numValue = parseInt(value);
+                          if (isNaN(numValue) || numValue < 1) {
+                            updateSmilePopupSetting('closeDelay', 5);
+                          } else if (numValue > 30) {
+                            updateSmilePopupSetting('closeDelay', 30);
+                          } else {
+                            updateSmilePopupSetting('closeDelay', numValue);
+                          }
+                        }
+                      }}
+                      placeholder="5"
                       disabled={!smilePopupSettings.enabled}
                     />
                   </div>

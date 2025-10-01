@@ -1,84 +1,79 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Settings } from 'lucide-react';
+import { Play, Pause, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { TimerCircle } from './TimerCircle';
-import { TimerSettings } from './TimerSettings';
+import { MiniTimerSettings } from './MiniTimerSettings';
 import { SessionStats } from './SessionStats';
 import { TaskList } from './TaskList';
 import SmilePopup from './SmilePopup';
 import { useToast } from '@/hooks/use-toast';
 import { useSmilePopupSettings } from '@/hooks/useChromeStorage';
+import { useOfflineTimerState } from '@/hooks/useOfflineTimerState';
+import { useAuth } from '@/hooks/useAuth';
+import '@/utils/timerDebug'; // Load debug utilities
 
-export type TimerMode = 'focus' | 'break' | 'longBreak';
+export type TimerMode = 'focus' | 'short_break' | 'long_break';
 
 interface FocusTimerProps {
   isCompact?: boolean;
 }
 
-interface TimerState {
-  timeLeft: number;
-  isRunning: boolean;
-  mode: TimerMode;
-  currentSession: number;
-  totalSessions: number;
-}
-
-interface TimerSettings {
-  focusTime: number;
-  breakTime: number;
-  longBreakTime: number;
-  sessionsUntilLongBreak: number;
-}
-
 export function FocusTimer({ isCompact = false }: FocusTimerProps) {
   const { toast } = useToast();
-  const [showSettings, setShowSettings] = useState(false);
+  const { user } = useAuth();
   const [showSmilePopup, setShowSmilePopup] = useState(false);
   
   // Get smile popup settings from Chrome storage
   const { value: smilePopupSettings } = useSmilePopupSettings();
   
-  // Debug: Log settings when they change
-  useEffect(() => {
-    console.log('Smile popup settings updated:', smilePopupSettings);
-  }, [smilePopupSettings]);
-  const [settings, setSettings] = useState<TimerSettings>({
-    focusTime: 25 * 60, // 25 minutes
-    breakTime: 5 * 60,  // 5 minutes
-    longBreakTime: 15 * 60, // 15 minutes
-    sessionsUntilLongBreak: 4,
-  });
+  // Use offline-first timer state management
+  const {
+    currentTime,
+    isRunning,
+    sessionType,
+    currentSession,
+    totalSessions,
+    progress,
+    isLoading,
+    startTimer,
+    pauseTimer,
+    resetTimer,
+    switchSessionType,
+    completeCurrentSession
+  } = useOfflineTimerState();
 
-  const [timer, setTimer] = useState<TimerState>({
-    timeLeft: settings.focusTime,
-    isRunning: false,
-    mode: 'focus',
-    currentSession: 1,
-    totalSessions: 0,
-  });
-
+  // Helper function to get total duration for current session type
+  const getTotalDuration = (sessionType: TimerMode): number => {
+    const savedSettings = localStorage.getItem('timer_settings');
+    let settings = { focusTime: 25, breakTime: 5, longBreakTime: 15 };
+    if (savedSettings) {
+      try {
+        settings = JSON.parse(savedSettings);
+      } catch (error) {
+        console.error('Failed to parse timer settings:', error);
+      }
+    }
+    switch (sessionType) {
+      case 'focus': return settings.focusTime * 60;
+      case 'short_break': return settings.breakTime * 60;
+      case 'long_break': return settings.longBreakTime * 60;
+      default: return 25 * 60;
+    }
+  };
+  
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getTimerDuration = (mode: TimerMode): number => {
-    switch (mode) {
-      case 'focus': return settings.focusTime;
-      case 'break': return settings.breakTime;
-      case 'longBreak': return settings.longBreakTime;
-      default: return settings.focusTime;
-    }
-  };
-
   const getModeTitle = (mode: TimerMode): string => {
     switch (mode) {
       case 'focus': return 'Focus Time';
-      case 'break': return 'Short Break';
-      case 'longBreak': return 'Long Break';
+      case 'short_break': return 'Short Break';
+      case 'long_break': return 'Long Break';
       default: return 'Focus Time';
     }
   };
@@ -86,100 +81,70 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
   const getModeVariant = (mode: TimerMode) => {
     switch (mode) {
       case 'focus': return 'timer';
-      case 'break': 
-      case 'longBreak': 
+      case 'short_break': 
+      case 'long_break': 
         return 'break';
       default: return 'timer';
     }
   };
 
   const toggleTimer = () => {
-    setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
-  };
-
-  const resetTimer = () => {
-    setTimer(prev => ({
-      ...prev,
-      timeLeft: getTimerDuration(prev.mode),
-      isRunning: false,
-    }));
-  };
-
-  const nextSession = () => {
-    let nextMode: TimerMode;
-    let nextSession = timer.currentSession;
-    
-    if (timer.mode === 'focus') {
-      // Completed a focus session
-      const completedSessions = timer.totalSessions + 1;
-      if (completedSessions % settings.sessionsUntilLongBreak === 0) {
-        nextMode = 'longBreak';
-      } else {
-        nextMode = 'break';
-      }
-      
-      setTimer(prev => ({
-        ...prev,
-        mode: nextMode,
-        timeLeft: getTimerDuration(nextMode),
-        isRunning: false,
-        totalSessions: completedSessions,
-      }));
-
-      toast({
-        title: "🎉 Focus session completed!",
-        description: `Great work! Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`,
-      });
+    if (isRunning) {
+      pauseTimer();
     } else {
-      // Completed a break
-      nextMode = 'focus';
-      nextSession = timer.currentSession + 1;
-      
-      setTimer(prev => ({
-        ...prev,
-        mode: nextMode,
-        timeLeft: getTimerDuration(nextMode),
-        isRunning: false,
-        currentSession: nextSession,
-      }));
-
-      toast({
-        title: "🔥 Break's over!",
-        description: "Ready to focus again? Let's get productive!",
-      });
+      startTimer();
     }
   };
 
+  const handleReset = () => {
+    resetTimer();
+    toast({
+      title: "Timer Reset",
+      description: "Timer has been reset to the beginning.",
+    });
+  };
+
   const handleSkipBreak = () => {
-    nextSession();
+    switchSessionType('focus');
+    toast({
+      title: "🔥 Break skipped!",
+      description: "Ready to focus again? Let's get productive!",
+    });
   };
 
   const handleStartBreak = () => {
-    nextSession();
+    toast({
+      title: "🎉 Focus session completed!",
+      description: `Great work! Time for a ${sessionType === 'long_break' ? 'long' : 'short'} break.`,
+    });
+  };
+
+  const handleSettingsChange = (newSettings: any) => {
+    console.log('Timer settings changed:', newSettings);
+    
+    toast({
+      title: "Settings Updated",
+      description: "Timer settings have been applied successfully!",
+    });
+    
+    // The useOfflineTimerState hook will automatically handle the timer update
+    // via the 'timerSettingsChanged' event listener
   };
 
   const openExternalSmilePopup = () => {
     const width = smilePopupSettings.windowWidth || 400;
     const height = smilePopupSettings.windowHeight || 300;
     
-    console.log('Opening external popup with dimensions:', { width, height });
-    
-    // Calculate center position
     const left = Math.round((screen.width - width) / 2);
     const top = Math.round((screen.height - height) / 2);
     
     const params = new URLSearchParams({
-      sessionType: timer.mode,
-      sessionCount: timer.totalSessions.toString(),
+      sessionType: sessionType,
+      sessionCount: totalSessions.toString(),
     });
     
-    console.log('Popup params:', params.toString());
-    
     if (typeof chrome !== 'undefined' && chrome.windows) {
-      console.log('Using Chrome windows API...');
       const url = chrome.runtime.getURL(`smile-popup.html?${params.toString()}`);
-      console.log('Popup URL:', url);
-      
       chrome.windows.create({
         url,
         type: 'popup',
@@ -188,88 +153,65 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
         left,
         top,
         focused: true,
-      }, (window) => {
-        if (chrome.runtime.lastError) {
-          console.error('Failed to create window:', chrome.runtime.lastError);
-        } else {
-          console.log('Window created successfully:', window);
-        }
       });
     } else {
-      console.log('Chrome windows API not available, using fallback...');
-      // Fallback for development
       const url = `/smile-popup?${params.toString()}`;
-      console.log('Fallback URL:', url);
       window.open(
         url,
         'smilePopup',
-        `width=${width},height=${height},left=${left},top=${top},resizable=no,scrollbars=no,status=no,menubar=no,toolbar=no`
+        `width=${width},height=${height},left=${left},top=${top},resizable=no`
       );
     }
   };
 
+  // Handle timer completion
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (timer.isRunning && timer.timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimer(prev => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
-      }, 1000);
-    } else if (timer.timeLeft === 0) {
-      console.log('Timer completed! Checking popup settings:', {
-        showAsExternalWindow: smilePopupSettings.showAsExternalWindow,
-        enabled: smilePopupSettings.enabled
-      });
-      
-      // Check if external window is enabled
+    if (currentTime === 0 && !isRunning) {
       if (smilePopupSettings.enabled && smilePopupSettings.showAsExternalWindow) {
-        console.log('Opening external smile popup...');
         openExternalSmilePopup();
       } else {
-        console.log('Opening inline smile popup...');
         setShowSmilePopup(true);
       }
+      
+      if (sessionType === 'focus') {
+        handleStartBreak();
+      }
     }
-
-    return () => clearInterval(interval);
-  }, [timer.isRunning, timer.timeLeft]);
-
-  const progress = ((getTimerDuration(timer.mode) - timer.timeLeft) / getTimerDuration(timer.mode)) * 100;
+  }, [currentTime, isRunning, sessionType]);
 
   if (isCompact) {
     return (
       <div className="space-y-4">
-        {/* Compact Timer Display */}
         <div className="text-center flex flex-col items-center">
           <h2 className="text-sm font-medium text-muted-foreground mb-2">
-            {getModeTitle(timer.mode)}
+            {getModeTitle(sessionType)}
           </h2>
           <div className="mb-4 flex justify-center">
             <TimerCircle
-              timeLeft={timer.timeLeft}
-              totalTime={getTimerDuration(timer.mode)}
-              mode={timer.mode}
-              isRunning={timer.isRunning}
+              timeLeft={currentTime}
+              totalTime={getTotalDuration(sessionType)}
+              mode={sessionType}
+              isRunning={isRunning}
               size="sm"
             />
           </div>
           <div className="timer-display-compact text-foreground mb-4 text-center">
-            {formatTime(timer.timeLeft)}
+            {formatTime(currentTime)}
           </div>
           <div className="w-full">
             <Progress value={progress} className="h-1 mb-4" />
           </div>
         </div>
 
-        {/* Compact Controls */}
         <div className="flex justify-center gap-2">
           <Button
-            variant={getModeVariant(timer.mode)}
+            variant={getModeVariant(sessionType)}
             size="sm"
             onClick={toggleTimer}
+            disabled={isLoading}
             className="min-w-20"
           >
-            {timer.isRunning ? (
+            {isRunning ? (
               <>
                 <Pause className="mr-1 h-3 w-3" />
                 Pause
@@ -285,42 +227,26 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={resetTimer}
+            onClick={handleReset}
+            disabled={isLoading}
           >
             <RotateCcw className="h-3 w-3" />
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSettings(true)}
-          >
-            <Settings className="h-3 w-3" />
-          </Button>
+          <MiniTimerSettings onSettingsChange={handleSettingsChange} />
         </div>
 
-        {/* Compact Session Info */}
         <div className="text-center text-xs text-muted-foreground">
-          Session {timer.currentSession} • {timer.totalSessions} completed
+          Session {currentSession} • {totalSessions} completed
         </div>
 
-        {/* Settings Modal */}
-        {showSettings && (
-          <TimerSettings
-            settings={settings}
-            onSettingsChange={setSettings}
-            onClose={() => setShowSettings(false)}
-          />
-        )}
-
-        {/* Smile Popup */}
         <SmilePopup
           isOpen={showSmilePopup}
           onClose={() => setShowSmilePopup(false)}
           onSkipBreak={handleSkipBreak}
           onStartBreak={handleStartBreak}
-          sessionType={timer.mode}
-          sessionCount={timer.totalSessions}
+          sessionType={sessionType}
+          sessionCount={totalSessions}
           customImage={smilePopupSettings.customImage}
         />
       </div>
@@ -330,7 +256,6 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background-secondary p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-4xl font-light tracking-tight text-foreground">
             Focus Timer
@@ -341,49 +266,45 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
-          {/* Main Timer Section */}
           <div className="lg:col-span-2">
             <Card className="glass p-8 text-center">
               <div className="mb-6">
                 <h2 className="mb-2 text-2xl font-medium text-foreground">
-                  {getModeTitle(timer.mode)}
+                  {getModeTitle(sessionType)}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Session {timer.currentSession} • {timer.totalSessions} completed
+                  Session {currentSession} • {totalSessions} completed
                 </p>
               </div>
 
-              {/* Timer Circle */}
               <div className="mb-8 flex justify-center">
                 <TimerCircle
-                  timeLeft={timer.timeLeft}
-                  totalTime={getTimerDuration(timer.mode)}
-                  mode={timer.mode}
-                  isRunning={timer.isRunning}
+                  timeLeft={currentTime}
+                  totalTime={getTotalDuration(sessionType)}
+                  mode={sessionType}
+                  isRunning={isRunning}
                 />
               </div>
 
-              {/* Timer Display */}
               <div className="mb-8 flex justify-center">
                 <div className="timer-display text-center text-foreground">
-                  {formatTime(timer.timeLeft)}
+                  {formatTime(currentTime)}
                 </div>
               </div>
 
-              {/* Progress Bar */}
               <div className="mb-8">
                 <Progress value={progress} className="h-2" />
               </div>
 
-              {/* Control Buttons */}
               <div className="flex justify-center gap-4">
                 <Button
-                  variant={getModeVariant(timer.mode)}
+                  variant={getModeVariant(sessionType)}
                   size="lg"
                   onClick={toggleTimer}
+                  disabled={isLoading}
                   className="min-w-32"
                 >
-                  {timer.isRunning ? (
+                  {isRunning ? (
                     <>
                       <Pause className="mr-2 h-5 w-5" />
                       Pause
@@ -399,56 +320,40 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
                 <Button
                   variant="outline"
                   size="lg"
-                  onClick={resetTimer}
+                  onClick={handleReset}
+                  disabled={isLoading}
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Reset
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => setShowSettings(true)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Button>
+                <div className="flex items-center">
+                  <MiniTimerSettings onSettingsChange={handleSettingsChange} />
+                </div>
               </div>
             </Card>
 
-            {/* Session Stats */}
             <div className="mt-8">
               <SessionStats
-                currentSession={timer.currentSession}
-                totalSessions={timer.totalSessions}
-                mode={timer.mode}
+                currentSession={currentSession}
+                totalSessions={totalSessions}
+                mode={sessionType}
               />
             </div>
           </div>
 
-          {/* Side Panel */}
           <div className="lg:col-span-1">
             <TaskList />
           </div>
         </div>
 
-        {/* Settings Modal */}
-        {showSettings && (
-          <TimerSettings
-            settings={settings}
-            onSettingsChange={setSettings}
-            onClose={() => setShowSettings(false)}
-          />
-        )}
-
-        {/* Smile Popup */}
         <SmilePopup
           isOpen={showSmilePopup}
           onClose={() => setShowSmilePopup(false)}
           onSkipBreak={handleSkipBreak}
           onStartBreak={handleStartBreak}
-          sessionType={timer.mode}
-          sessionCount={timer.totalSessions}
+          sessionType={sessionType}
+          sessionCount={totalSessions}
           customImage={smilePopupSettings.customImage}
         />
       </div>

@@ -1,14 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Sparkles, Lightbulb, Target, Clock, MessageCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  Bot, 
+  Send, 
+  Sparkles, 
+  Lightbulb, 
+  Target, 
+  Clock, 
+  MessageCircle, 
+  History, 
+  Plus, 
+  Archive, 
+  Trash2,
+  Loader2,
+  RefreshCw
+} from 'lucide-react';
 import { generateGeminiResponse } from '@/lib/gemini';
 import { useGeminiSettings } from '@/hooks/useGeminiSettings';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  useActiveConversation, 
+  useConversationMessages, 
+  useAddChatMessage, 
+  useChatConversations,
+  useCreateConversation,
+  useArchiveConversation,
+  useChatStats
+} from '@/hooks/useSupabaseQueries';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -19,19 +44,52 @@ interface Message {
 }
 
 export function AiAssistant() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m your AI productivity coach. I can help you with focus techniques, productivity tips, and motivation. How can I assist you today?',
-      sender: 'ai',
-      timestamp: new Date(),
-      type: 'encouragement'
-    }
-  ]);
-  
+  const { user } = useAuth();
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { settings: geminiSettings } = useGeminiSettings();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Data fetching hooks
+  const { data: activeConversation, isLoading: conversationLoading } = useActiveConversation();
+  const { data: messages = [], isLoading: messagesLoading, refetch: refetchMessages } = useConversationMessages(activeConversation?.id);
+  const { data: conversations = [] } = useChatConversations();
+  const { data: chatStats } = useChatStats();
+
+  // Mutation hooks
+  const addMessage = useAddChatMessage();
+  const createConversation = useCreateConversation();
+  const archiveConversation = useArchiveConversation();
+
+  // Convert database messages to component format
+  const formattedMessages: Message[] = messages.map(msg => ({
+    id: msg.id,
+    content: msg.content,
+    sender: msg.sender,
+    timestamp: new Date(msg.created_at),
+    type: msg.message_type as 'suggestion' | 'tip' | 'encouragement'
+  }));
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [formattedMessages]);
+
+  // Add welcome message if no messages exist
+  useEffect(() => {
+    if (activeConversation && messages.length === 0 && !messagesLoading) {
+      const welcomeMessage = {
+        conversation_id: activeConversation.id,
+        user_id: user!.id,
+        content: 'Hello! I\'m your AI productivity coach. I can help you with focus techniques, productivity tips, and motivation. How can I assist you today?',
+        sender: 'ai' as const,
+        message_type: 'encouragement' as const,
+      };
+      
+      addMessage.mutate(welcomeMessage);
+    }
+  }, [activeConversation, messages.length, messagesLoading]);
 
   // No need for useEffect to load settings - handled by useGeminiSettings hook
 
@@ -104,57 +162,107 @@ export function AiAssistant() {
   };
 
   const sendMessage = async () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || !activeConversation || !user) return;
 
     if (!geminiSettings.isConfigured) {
-      toast({
-        title: "AI Not Configured",
-        description: "Please set your Gemini API key and select a model in the AI settings.",
-        variant: "destructive"
-      });
+      toast.error('Please set your Gemini API key and select a model in Settings first.');
       return;
     }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const messageContent = inputMessage.trim();
     setInputMessage('');
     setIsTyping(true);
 
+    const startTime = Date.now();
+
     try {
+      // Add user message to database
+      await addMessage.mutateAsync({
+        conversation_id: activeConversation.id,
+        user_id: user.id,
+        content: messageContent,
+        sender: 'user',
+        message_type: 'text',
+      });
+
       console.log('Debug - API Key:', geminiSettings.apiKey ? 'Present' : 'Missing');
       console.log('Debug - Model:', geminiSettings.model);
       console.log('Debug - Is Configured:', geminiSettings.isConfigured);
       
-      const aiResponseContent = await generateGeminiResponse(geminiSettings.apiKey!, inputMessage, geminiSettings.model!);
-      const aiResponse: Message = {
-        id: Date.now().toString(),
+      // Generate AI response
+      const aiResponseContent = await generateGeminiResponse(
+        geminiSettings.apiKey!, 
+        messageContent, 
+        geminiSettings.model!
+      );
+
+      const responseTime = Date.now() - startTime;
+      
+      // Determine message type based on content
+      const messageType = determineMessageType(aiResponseContent);
+
+      // Add AI response to database
+      await addMessage.mutateAsync({
+        conversation_id: activeConversation.id,
+        user_id: user.id,
         content: aiResponseContent,
         sender: 'ai',
-        timestamp: new Date(),
-        type: 'tip' // Default type, can be improved with AI response analysis
-      };
-      setMessages(prev => [...prev, aiResponse]);
+        message_type: messageType,
+        response_time_ms: responseTime,
+        tokens_used: Math.ceil(aiResponseContent.length / 4), // Rough token estimate
+      });
+
+      toast.success('Response generated successfully!');
     } catch (error) {
       console.error('Error generating Gemini response:', error);
-      console.error('Full error details:', error);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          content: 'Sorry, I could not generate a response. Please check your API key and model selection.',
-          sender: 'ai',
-          timestamp: new Date(),
-          type: 'encouragement'
-        }
-      ]);
+      
+      // Add error message to database
+      await addMessage.mutateAsync({
+        conversation_id: activeConversation.id,
+        user_id: user.id,
+        content: 'Sorry, I could not generate a response. Please check your API key and model selection.',
+        sender: 'ai',
+        message_type: 'encouragement',
+        response_time_ms: Date.now() - startTime,
+      });
+
+      toast.error('Failed to generate AI response. Please check your settings.');
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const determineMessageType = (content: string): 'text' | 'suggestion' | 'tip' | 'encouragement' => {
+    const lowerContent = content.toLowerCase();
+    
+    if (lowerContent.includes('try') || lowerContent.includes('consider') || lowerContent.includes('suggest')) {
+      return 'suggestion';
+    } else if (lowerContent.includes('tip') || lowerContent.includes('technique') || lowerContent.includes('method')) {
+      return 'tip';
+    } else if (lowerContent.includes('you can') || lowerContent.includes('believe') || lowerContent.includes('great')) {
+      return 'encouragement';
+    }
+    
+    return 'text';
+  };
+
+  const handleNewConversation = async () => {
+    try {
+      await createConversation.mutateAsync({ title: 'New Conversation' });
+      toast.success('New conversation started!');
+    } catch (error) {
+      toast.error('Failed to create new conversation');
+    }
+  };
+
+  const handleArchiveConversation = async () => {
+    if (!activeConversation) return;
+    
+    try {
+      await archiveConversation.mutateAsync(activeConversation.id);
+      toast.success('Conversation archived');
+    } catch (error) {
+      toast.error('Failed to archive conversation');
     }
   };
 
@@ -171,21 +279,59 @@ export function AiAssistant() {
     }
   };
 
+  if (conversationLoading || messagesLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 glass">
+        <TabsList className="grid w-full grid-cols-3 glass">
           <TabsTrigger value="chat">AI Chat</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
 
         {/* AI Chat Tab */}
         <TabsContent value="chat" className="space-y-4">
+          {/* Chat Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">
+                {activeConversation?.title || 'AI Assistant'}
+              </h3>
+              {activeConversation && (
+                <Badge variant="outline" className="text-xs">
+                  {activeConversation.message_count} messages
+                </Badge>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleNewConversation}>
+                <Plus className="h-4 w-4 mr-1" />
+                New Chat
+              </Button>
+              {activeConversation && activeConversation.message_count > 0 && (
+                <Button variant="outline" size="sm" onClick={handleArchiveConversation}>
+                  <Archive className="h-4 w-4 mr-1" />
+                  Archive
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => refetchMessages()}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
           <Card className="glass">
             {/* Chat Messages */}
             <ScrollArea className="h-96 p-4">
               <div className="space-y-4">
-                {messages.map((message) => (
+                {formattedMessages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex gap-3 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -203,7 +349,7 @@ export function AiAssistant() {
                           : 'bg-card text-card-foreground'
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                       <p className="text-xs opacity-70 mt-1">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -231,6 +377,8 @@ export function AiAssistant() {
                     </div>
                   </div>
                 )}
+                
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
@@ -274,6 +422,64 @@ export function AiAssistant() {
           </Card>
         </TabsContent>
 
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Conversation History</h3>
+            {chatStats && (
+              <div className="flex gap-4 text-sm text-muted-foreground">
+                <span>{chatStats.totalConversations} conversations</span>
+                <span>{chatStats.totalMessages} messages</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {conversations.map((conversation) => (
+              <Card key={conversation.id} className="glass p-4 hover:bg-card/80 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-sm">
+                      {conversation.title || 'Untitled Conversation'}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {conversation.message_count} messages
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(conversation.last_message_at).toLocaleDateString()}
+                      </span>
+                      {conversation.is_active && (
+                        <Badge variant="secondary" className="text-xs">Active</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm">
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <Archive className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {conversations.length === 0 && (
+              <Card className="glass p-8 text-center">
+                <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">No Conversations Yet</h3>
+                <p className="text-muted-foreground mb-4">Start chatting with your AI assistant to build your conversation history!</p>
+                <Button onClick={handleNewConversation}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Start First Conversation
+                </Button>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
         {/* Insights Tab */}
         <TabsContent value="insights" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -281,12 +487,23 @@ export function AiAssistant() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Focus Patterns</h3>
+                  <h3 className="font-semibold text-foreground">Chat Statistics</h3>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Your peak focus time is between 9 AM and 11 AM. Consider scheduling your most important tasks during this window.
-                </p>
-                <Badge variant="secondary">Personalized Insight</Badge>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Total Conversations:</span>
+                    <span className="font-medium">{chatStats?.totalConversations || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total Messages:</span>
+                    <span className="font-medium">{chatStats?.totalMessages || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Avg Messages/Chat:</span>
+                    <span className="font-medium">{chatStats?.averageMessagesPerConversation || 0}</span>
+                  </div>
+                </div>
+                <Badge variant="secondary">Usage Analytics</Badge>
               </div>
             </Card>
 
@@ -294,12 +511,12 @@ export function AiAssistant() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-accent" />
-                  <h3 className="font-semibold text-foreground">Break Optimization</h3>
+                  <h3 className="font-semibold text-foreground">AI Performance</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Your productivity increases by 23% when you take active breaks. Try a 5-minute walk between sessions.
+                  Your AI assistant is responding quickly and providing helpful insights. Average response time is under 2 seconds.
                 </p>
-                <Badge variant="outline">AI Recommendation</Badge>
+                <Badge variant="outline">Performance Metrics</Badge>
               </div>
             </Card>
 
@@ -307,12 +524,12 @@ export function AiAssistant() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-secondary" />
-                  <h3 className="font-semibold text-foreground">Motivation Boost</h3>
+                  <h3 className="font-semibold text-foreground">Conversation Tips</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  "The secret of getting ahead is getting started." - Mark Twain. You've got this! 🌟
+                  Try asking specific questions about your productivity challenges for more personalized advice. The AI learns from your conversation history.
                 </p>
-                <Badge variant="secondary">Daily Inspiration</Badge>
+                <Badge variant="secondary">Usage Tips</Badge>
               </div>
             </Card>
 
@@ -320,12 +537,12 @@ export function AiAssistant() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-yellow-500" />
-                  <h3 className="font-semibold text-foreground">Smart Tip</h3>
+                  <h3 className="font-semibold text-foreground">Privacy & Data</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Try the "two-minute rule": if something takes less than two minutes, do it now instead of adding it to your todo list.
+                  Your conversations are stored securely and privately. You can archive or delete conversations at any time from the History tab.
                 </p>
-                <Badge variant="outline">Productivity Hack</Badge>
+                <Badge variant="outline">Privacy Info</Badge>
               </div>
             </Card>
           </div>

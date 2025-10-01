@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,171 +8,105 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Heart, Sparkles, Download, Share, Trash2, Search, Filter, Edit3, Plus, Bot, Wand2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { generateGeminiResponse } from '@/lib/gemini';
-import { useGeminiSettings } from '@/hooks/useGeminiSettings';
-
-interface Quote {
-  id: string;
-  text: string;
-  author: string;
-  category: string;
-  isFavorite: boolean;
-  isAiGenerated: boolean;
-  createdAt: Date;
-}
+import { Heart, Sparkles, Download, Share, Trash2, Search, Filter, Edit3, Plus, Bot, Wand2, Loader2, Wifi, WifiOff, AlertCircle } from 'lucide-react';
+import { useQuotesState } from '@/hooks/useQuotesState';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export function EnhancedQuotesDashboard() {
-  const [quotes, setQuotes] = useState<Quote[]>(
-    []
-  );
+  const { user } = useAuth();
+  const {
+    quotes,
+    allQuotes,
+    categories,
+    searchTerm,
+    selectedCategory,
+    localQuoteCount,
+    favoriteQuotes,
+    customQuotes,
+    aiQuotes,
+    isLoading,
+    isSyncing,
+    isAIConfigured,
+    createQuote,
+    updateQuote,
+    deleteQuote,
+    toggleFavorite,
+    setSearchTerm,
+    setSelectedCategory,
+    generateAIQuote,
+    syncLocalQuotes
+  } = useQuotesState();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('all');
   const [newQuoteText, setNewQuoteText] = useState('');
   const [newQuoteAuthor, setNewQuoteAuthor] = useState('');
   const [newQuoteCategory, setNewQuoteCategory] = useState('');
-  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [editingQuote, setEditingQuote] = useState<{
+    id: string;
+    content: string;
+    author: string;
+    category: string;
+  } | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const { settings: geminiSettings } = useGeminiSettings();
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      // This will be handled by the useGeminiSettings hook
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
-  const { toast } = useToast();
-
-  const categories = ['all', 'favorites', ...Array.from(new Set(quotes.map(q => q.category)))];
-
-  const filteredQuotes = quotes.filter(quote => {
-    const matchesSearch = quote.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quote.author.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || 
-                           (filterCategory === 'favorites' && quote.isFavorite) ||
-                           quote.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const toggleFavorite = (id: string) => {
-    setQuotes(prev => prev.map(quote => 
-      quote.id === id ? { ...quote, isFavorite: !quote.isFavorite } : quote
-    ));
-  };
-
-  const deleteQuote = (id: string) => {
-    setQuotes(prev => prev.filter(quote => quote.id !== id));
-    toast({
-      title: "Quote Deleted",
-      description: "The quote has been removed from your collection.",
-    });
-  };
-
-  const addQuote = () => {
+  const addQuote = async () => {
     if (!newQuoteText.trim() || !newQuoteAuthor.trim()) return;
-    
-    const newQuote: Quote = {
-      id: Date.now().toString(),
-      text: newQuoteText.trim(),
-      author: newQuoteAuthor.trim(),
-      category: newQuoteCategory || 'General',
-      isFavorite: false,
-      isAiGenerated: false,
-      createdAt: new Date()
-    };
-    
-    setQuotes(prev => [newQuote, ...prev]);
-    setNewQuoteText('');
-    setNewQuoteAuthor('');
-    setNewQuoteCategory('');
-    
-    toast({
-      title: "Quote Added",
-      description: "Your new quote has been added to the collection.",
-    });
+
+    try {
+      await createQuote({
+        content: newQuoteText.trim(),
+        author: newQuoteAuthor.trim(),
+        category: newQuoteCategory || 'Custom'
+      });
+
+      setNewQuoteText('');
+      setNewQuoteAuthor('');
+      setNewQuoteCategory('');
+
+      toast.success('Quote added successfully!');
+    } catch (error) {
+      toast.error('Failed to add quote');
+    }
   };
 
-  const updateQuote = () => {
-    if (!editingQuote) return;
-    
-    setQuotes(prev => prev.map(quote => 
-      quote.id === editingQuote.id ? editingQuote : quote
-    ));
-    setEditingQuote(null);
-    
-    toast({
-      title: "Quote Updated",
-      description: "Your changes have been saved.",
-    });
+  const handleDeleteQuote = async (quoteId: string) => {
+    try {
+      await deleteQuote(quoteId);
+      toast.success('Quote deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete quote');
+    }
+  };
+
+  const handleToggleFavorite = (quoteId: string) => {
+    toggleFavorite(quoteId);
+    const quote = allQuotes.find(q => q.id === quoteId);
+    if (quote) {
+      toast.success(quote.isFavorite ? 'Removed from favorites' : 'Added to favorites');
+    }
   };
 
   const generateCustomQuote = async () => {
     if (!customPrompt.trim()) {
-      toast({
-        title: "Prompt Required",
-        description: "Please enter a prompt for quote generation.",
-        variant: "destructive"
-      });
+      toast.error('Please enter a prompt for quote generation.');
       return;
     }
 
-    if (!geminiSettings.isConfigured) {
-      toast({
-        title: "AI Not Configured",
-        description: "Please configure your Gemini API key and select a model in Settings first.",
-        variant: "destructive"
-      });
+    if (!isAIConfigured) {
+      toast.error('Please configure your Gemini API key and select a model in Settings first.');
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      const generatedText = await generateGeminiResponse(
-        geminiSettings.apiKey!,
-        `Generate an inspirational quote based on this prompt: "${customPrompt}". Return only the quote text without quotes, followed by a line break, then "— [Author Name]" where Author Name should be an appropriate fictional or real author that fits the quote's style and theme.`,
-        geminiSettings.model!
-      );
-      
-      // Parse the response to extract quote and author
-      const lines = generatedText.trim().split('\n');
-      const quoteText = lines[0].replace(/^["']|["']$/g, ''); // Remove quotes if present
-      const authorLine = lines.find(line => line.includes('—')) || '— AI Assistant';
-      const author = authorLine.replace('—', '').trim();
-
-      const aiQuote: Quote = {
-        id: Date.now().toString(),
-        text: quoteText,
-        author: author,
-        category: 'AI Generated',
-        isFavorite: false,
-        isAiGenerated: true,
-        createdAt: new Date()
-      };
-      
-      setQuotes(prev => [aiQuote, ...prev]);
+      await generateAIQuote(customPrompt);
       setCustomPrompt('');
-      
-      toast({
-        title: "Quote Generated! ✨",
-        description: "Your AI-generated quote has been added to your collection.",
-      });
-
+      toast.success('Quote generated successfully! ✨');
     } catch (error) {
       console.error('Error generating quote:', error);
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate quote. Please check your API key and try again.",
-        variant: "destructive"
-      });
+      toast.error('Failed to generate quote. Please check your API key and try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -186,16 +120,86 @@ export function EnhancedQuotesDashboard() {
       'achieving goals',
       'staying motivated'
     ];
-    
+
     const randomPrompt = quickPrompts[Math.floor(Math.random() * quickPrompts.length)];
     setCustomPrompt(randomPrompt);
-    
+
     // Auto-generate after setting prompt
     setTimeout(() => generateCustomQuote(), 100);
   };
 
+  const handleSyncLocal = async () => {
+    try {
+      await syncLocalQuotes();
+      toast.success('Local quotes synced to database');
+    } catch (error) {
+      toast.error('Failed to sync local quotes');
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header with Status */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Inspiration Library</h2>
+          <p className="text-muted-foreground">
+            {user ? 'Your personal collection synced across devices' : 'Sign in to save and sync quotes'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Sync Status Indicator */}
+          {isSyncing ? (
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+          ) : user ? (
+            <Wifi className="h-4 w-4 text-green-500" />
+          ) : (
+            <WifiOff className="h-4 w-4 text-gray-400" />
+          )}
+
+          {/* Local Quotes Badge */}
+          {localQuoteCount > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {localQuoteCount} local
+            </Badge>
+          )}
+
+          {/* Sync Button */}
+          {localQuoteCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncLocal}
+              disabled={!user || isSyncing}
+              className="text-xs"
+            >
+              Sync Local
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="glass p-4 text-center">
+          <div className="text-2xl font-bold text-foreground">{allQuotes.length}</div>
+          <div className="text-sm text-muted-foreground">Total Quotes</div>
+        </Card>
+        <Card className="glass p-4 text-center">
+          <div className="text-2xl font-bold text-red-500">{favoriteQuotes.length}</div>
+          <div className="text-sm text-muted-foreground">Favorites</div>
+        </Card>
+        <Card className="glass p-4 text-center">
+          <div className="text-2xl font-bold text-blue-500">{customQuotes.length}</div>
+          <div className="text-sm text-muted-foreground">Custom</div>
+        </Card>
+        <Card className="glass p-4 text-center">
+          <div className="text-2xl font-bold text-purple-500">{aiQuotes.length}</div>
+          <div className="text-sm text-muted-foreground">AI Generated</div>
+        </Card>
+      </div>
+
       <Tabs defaultValue="browse" className="w-full">
         <TabsList className="grid w-full grid-cols-3 glass">
           <TabsTrigger value="browse">Browse Quotes</TabsTrigger>
@@ -210,13 +214,14 @@ export function EnhancedQuotesDashboard() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search quotes..."
+                placeholder={user ? "Search quotes..." : "Sign in to search your quotes"}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 glass"
+                disabled={isSyncing}
               />
             </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-48 glass">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
@@ -226,9 +231,11 @@ export function EnhancedQuotesDashboard() {
               <SelectContent>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : 
-                     category === 'favorites' ? 'Favorites' : 
-                     category}
+                    {category === 'all' ? 'All Categories' :
+                      category === 'favorites' ? 'Favorites' :
+                        category === 'custom' ? 'Custom Quotes' :
+                          category === 'ai' ? 'AI Generated' :
+                            category}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -236,126 +243,163 @@ export function EnhancedQuotesDashboard() {
           </div>
 
           {/* Quotes Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredQuotes.map(quote => (
-              <Card key={quote.id} className="glass p-6 transition-all hover:scale-105 hover:glow-primary">
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <Badge variant={quote.isAiGenerated ? "secondary" : "outline"} className="text-xs">
-                      {quote.isAiGenerated ? (
-                        <><Bot className="mr-1 h-3 w-3" /> AI</>
-                      ) : (
-                        quote.category
-                      )}
-                    </Badge>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleFavorite(quote.id)}
-                        className={quote.isFavorite ? 'text-red-500' : 'text-muted-foreground'}
-                      >
-                        <Heart className={`h-4 w-4 ${quote.isFavorite ? 'fill-current' : ''}`} />
-                      </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingQuote(quote)}
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Quote</DialogTitle>
-                          </DialogHeader>
-                          {editingQuote && (
-                            <div className="space-y-4">
-                              <Textarea
-                                value={editingQuote.text}
-                                onChange={(e) => setEditingQuote(prev => 
-                                  prev ? { ...prev, text: e.target.value } : null
-                                )}
-                                className="min-h-24"
-                              />
-                              <Input
-                                value={editingQuote.author}
-                                onChange={(e) => setEditingQuote(prev => 
-                                  prev ? { ...prev, author: e.target.value } : null
-                                )}
-                                placeholder="Author"
-                              />
-                              <Input
-                                value={editingQuote.category}
-                                onChange={(e) => setEditingQuote(prev => 
-                                  prev ? { ...prev, category: e.target.value } : null
-                                )}
-                                placeholder="Category"
-                              />
-                              <Button onClick={updateQuote} className="w-full">
-                                Save Changes
-                              </Button>
-                            </div>
+          {isLoading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading your quotes...</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {quotes.map(quote => (
+                <Card key={quote.id} className={`glass p-6 transition-all hover:scale-105 hover:glow-primary ${quote.isLocal ? 'border-yellow-500/50 bg-yellow-500/10' : ''}`}>
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-2">
+                        <Badge variant={quote.isAiGenerated ? "secondary" : "outline"} className="text-xs">
+                          {quote.isAiGenerated ? (
+                            <><Bot className="mr-1 h-3 w-3" /> AI</>
+                          ) : (
+                            quote.category || 'General'
                           )}
-                        </DialogContent>
-                      </Dialog>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-red-500">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Quote</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this quote? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => deleteQuote(quote.id)}
-                              className="bg-red-500 hover:bg-red-600"
+                        </Badge>
+                        {quote.isLocal && (
+                          <Badge variant="outline" className="text-xs">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Local
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleFavorite(quote.id)}
+                          className={quote.isFavorite ? 'text-red-500' : 'text-muted-foreground'}
+                          disabled={isSyncing}
+                        >
+                          <Heart className={`h-4 w-4 ${quote.isFavorite ? 'fill-current' : ''}`} />
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingQuote(quote)}
                             >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Edit Quote</DialogTitle>
+                            </DialogHeader>
+                            {editingQuote && (
+                              <div className="space-y-4">
+                                <Textarea
+                                  value={editingQuote.content}
+                                  onChange={(e) => setEditingQuote(prev =>
+                                    prev ? { ...prev, content: e.target.value } : null
+                                  )}
+                                  className="min-h-24"
+                                />
+                                <Input
+                                  value={editingQuote.author}
+                                  onChange={(e) => setEditingQuote(prev =>
+                                    prev ? { ...prev, author: e.target.value } : null
+                                  )}
+                                  placeholder="Author"
+                                />
+                                <Input
+                                  value={editingQuote.category}
+                                  onChange={(e) => setEditingQuote(prev =>
+                                    prev ? { ...prev, category: e.target.value } : null
+                                  )}
+                                  placeholder="Category"
+                                />
+                                <Button 
+                                  onClick={async () => {
+                                    if (editingQuote) {
+                                      try {
+                                        await updateQuote(editingQuote.id, {
+                                          content: editingQuote.content,
+                                          author: editingQuote.author,
+                                          category: editingQuote.category
+                                        });
+                                        setEditingQuote(null);
+                                        toast.success('Quote updated successfully');
+                                      } catch (error) {
+                                        toast.error('Failed to update quote');
+                                      }
+                                    }
+                                  }} 
+                                  className="w-full"
+                                >
+                                  Save Changes
+                                </Button>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-red-500">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Quote</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this quote? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteQuote(quote.id)}
+                                className="bg-red-500 hover:bg-red-600"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+
+                    <blockquote className="text-sm italic text-foreground leading-relaxed">
+                      "{quote.content}"
+                    </blockquote>
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>— {quote.author || 'Unknown'}</span>
+                      <span>{new Date(quote.created_at).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" className="h-8 text-xs">
+                        <Share className="mr-1 h-3 w-3" />
+                        Share
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs">
+                        <Download className="mr-1 h-3 w-3" />
+                        Save
+                      </Button>
                     </div>
                   </div>
+                </Card>
+              ))}
+            </div>
+          )}
 
-                  <blockquote className="text-sm italic text-foreground leading-relaxed">
-                    "{quote.text}"
-                  </blockquote>
-
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>— {quote.author}</span>
-                    <span>{quote.createdAt.toLocaleDateString()}</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" className="h-8 text-xs">
-                      <Share className="mr-1 h-3 w-3" />
-                      Share
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs">
-                      <Download className="mr-1 h-3 w-3" />
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          {filteredQuotes.length === 0 && (
+          {!isLoading && quotes.length === 0 && (
             <div className="text-center py-12">
               <div className="text-4xl mb-4">📝</div>
-              <p className="text-muted-foreground">No quotes found matching your search.</p>
+              <p className="text-muted-foreground">
+                {selectedCategory === 'all'
+                  ? 'No quotes in your collection yet. Create some below!'
+                  : `No ${selectedCategory} quotes found.`}
+              </p>
             </div>
           )}
         </TabsContent>
@@ -388,14 +432,23 @@ export function EnhancedQuotesDashboard() {
                   className="glass"
                 />
               </div>
-              <Button 
+              <Button
                 onClick={addQuote}
-                disabled={!newQuoteText.trim() || !newQuoteAuthor.trim()}
+                disabled={!newQuoteText.trim() || !newQuoteAuthor.trim() || isSyncing}
                 className="w-full"
                 variant="timer"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Quote
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Quote
+                  </>
+                )}
               </Button>
             </div>
           </Card>
@@ -424,9 +477,9 @@ export function EnhancedQuotesDashboard() {
                     className="glass min-h-20"
                   />
                 </div>
-                
+
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     onClick={generateCustomQuote}
                     disabled={isGenerating || !customPrompt.trim()}
                     variant="timer"
@@ -444,7 +497,7 @@ export function EnhancedQuotesDashboard() {
                       </>
                     )}
                   </Button>
-                  <Button 
+                  <Button
                     onClick={generateQuickQuote}
                     disabled={isGenerating}
                     variant="secondary"
@@ -460,10 +513,10 @@ export function EnhancedQuotesDashboard() {
           {/* Recent AI Generated Quotes */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Recent AI Quotes</h4>
-            {quotes.filter(q => q.isAiGenerated).slice(0, 3).map(quote => (
+            {aiQuotes.slice(0, 3).map(quote => (
               <Card key={quote.id} className="glass p-4">
                 <blockquote className="text-sm italic text-foreground">
-                  "{quote.text}"
+                  "{quote.content}"
                 </blockquote>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-muted-foreground">— {quote.author}</span>
@@ -471,8 +524,9 @@ export function EnhancedQuotesDashboard() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleFavorite(quote.id)}
+                      onClick={() => handleToggleFavorite(quote.id)}
                       className={quote.isFavorite ? 'text-red-500' : 'text-muted-foreground'}
+                      disabled={isSyncing}
                     >
                       <Heart className={`h-3 w-3 ${quote.isFavorite ? 'fill-current' : ''}`} />
                     </Button>
@@ -491,8 +545,8 @@ export function EnhancedQuotesDashboard() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => deleteQuote(quote.id)}
+                          <AlertDialogAction
+                            onClick={() => handleDeleteQuote(quote.id)}
                             className="bg-red-500 hover:bg-red-600"
                           >
                             Delete

@@ -5,6 +5,8 @@ import { SessionAnalytics } from './SessionAnalytics';
 import { AiAssistant } from './AiAssistant';
 import { UserProfile } from './UserProfile';
 import { Settings } from './Settings';
+import { SupabaseStatus } from './SupabaseStatus';
+import { QuoteDebugPanel } from './QuoteDebugPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -14,8 +16,10 @@ import {
   Bot, 
   User, 
   Settings as SettingsIcon,
+  Database,
   Menu,
-  X
+  X,
+  Bug
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -32,6 +36,8 @@ export function Dashboard({ className }: DashboardProps) {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, component: SessionAnalytics },
     { id: 'ai', label: 'AI Assistant', icon: Bot, component: AiAssistant },
     { id: 'profile', label: 'Profile', icon: User, component: UserProfile },
+    { id: 'backend', label: 'Backend Status', icon: Database, component: SupabaseStatus },
+    { id: 'debug', label: 'Quote Debug', icon: Bug, component: QuoteDebugPanel },
     { id: 'settings', label: 'Settings', icon: SettingsIcon, component: Settings },
   ];
 
@@ -165,6 +171,7 @@ function getTabDescription(tabId: string): string {
     analytics: 'Analyze your productivity patterns and celebrate your achievements',
     ai: 'Chat with your AI productivity coach for personalized advice',
     profile: 'Track your progress and customize your focus journey',
+    backend: 'Monitor Supabase backend connection and database status',
     settings: 'Personalize your focus experience and manage preferences',
   };
   return descriptions[tabId as keyof typeof descriptions] || '';

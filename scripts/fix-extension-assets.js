@@ -12,12 +12,16 @@ const distDir = path.resolve(__dirname, '../dist');
 const indexHtmlPath = path.join(distDir, 'index.html');
 const indexHtml = fs.readFileSync(indexHtmlPath, 'utf-8');
 
-// Extract script and link tags from index.html
+// Extract script and link tags from index.html and fix paths
 const scriptMatches = indexHtml.match(/<script[^>]*src="[^"]*"[^>]*><\/script>/g) || [];
 const linkMatches = indexHtml.match(/<link[^>]*href="[^"]*"[^>]*>/g) || [];
 
+// Fix absolute paths to relative paths for Chrome extension
+const fixedScripts = scriptMatches.map(script => script.replace(/src="\/assets\//g, 'src="./assets/'));
+const fixedLinks = linkMatches.map(link => link.replace(/href="\/assets\//g, 'href="./assets/'));
+
 // Create the asset references HTML
-const assetReferences = [...scriptMatches, ...linkMatches].join('\n    ');
+const assetReferences = [...fixedScripts, ...fixedLinks].join('\n    ');
 
 // Template for the HTML files
 const createHtmlTemplate = (title, route) => `<!DOCTYPE html>

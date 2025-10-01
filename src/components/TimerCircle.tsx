@@ -25,8 +25,8 @@ export function TimerCircle({ timeLeft, totalTime, mode, isRunning, size = 'lg' 
     switch (mode) {
       case 'focus': 
         return 'hsl(var(--primary))';
-      case 'break':
-      case 'longBreak':
+      case 'short_break':
+      case 'long_break':
         return 'hsl(var(--secondary))';
       default:
         return 'hsl(var(--primary))';
