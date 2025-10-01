@@ -5,6 +5,8 @@ import { SessionAnalytics } from './SessionAnalytics';
 import { AiAssistant } from './AiAssistant';
 import { UserProfile } from './UserProfile';
 import { Settings } from './Settings';
+import { useAuth } from '@/hooks/useAuth';
+import { useSessions } from '@/hooks/useSupabaseQueries';
 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +28,25 @@ interface DashboardProps {
 export function Dashboard({ className }: DashboardProps) {
   const [activeTab, setActiveTab] = useState('timer');
   const [sidebarOpen, setSidebarOpen] = useState(true); // Default to open for better UX
+  
+  // Get user data and session statistics
+  const { user } = useAuth();
+  const { data: sessions = [] } = useSessions(200);
+
+  // Calculate user level and stats
+  const getUserStats = () => {
+    const completedSessions = sessions.filter(s => s.completed && s.session_type === 'focus').length;
+    const level = Math.floor(Math.sqrt(completedSessions / 10)) + 1; // Level based on completed sessions
+    const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Focus Master';
+    
+    return {
+      name: userName,
+      level,
+      sessions: completedSessions
+    };
+  };
+
+  const userStats = getUserStats();
 
   const tabs = [
     { id: 'timer', label: 'Focus Timer', icon: Timer, component: FocusTimer },
@@ -99,11 +120,14 @@ export function Dashboard({ className }: DashboardProps) {
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    Focus Master
+                  <p className="text-sm font-medium text-foreground truncate" title={userStats.name}>
+                    {user ? userStats.name : 'Guest User'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Level 5 • 127 sessions
+                    {user 
+                      ? `Level ${userStats.level} • ${userStats.sessions} sessions`
+                      : 'Login to track progress'
+                    }
                   </p>
                 </div>
               </div>
