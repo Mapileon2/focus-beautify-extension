@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle, LogOut, User } from 'lucide-react';
+import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle, LogOut, User, Mail } from 'lucide-react';
 import { GeminiAISettings } from './GeminiAISettings';
 import { ImageUpload } from './ImageUpload';
+import { EmailManagement } from './EmailManagement';
 
 import { useSmilePopupSettings, useAppSettings } from '@/hooks/useChromeStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -158,9 +159,10 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="timer" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="timer">Timer</TabsTrigger>
           <TabsTrigger value="ai">AI</TabsTrigger>
+          <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="smile">Smile Popup</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
@@ -205,6 +207,11 @@ export function Settings() {
         {/* AI Settings */}
         <TabsContent value="ai" className="space-y-6">
           <GeminiAISettings />
+        </TabsContent>
+
+        {/* Email Settings */}
+        <TabsContent value="email" className="space-y-6">
+          <EmailManagement />
         </TabsContent>
 
         {/* Notifications */}

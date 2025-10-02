@@ -16,6 +16,7 @@ export const LoginForm: React.FC = () => {
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [resetEmail, setResetEmail] = useState('')
+  const [magicLinkEmail, setMagicLinkEmail] = useState('')
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
   const [pendingEmail, setPendingEmail] = useState('')
 
@@ -95,6 +96,22 @@ export const LoginForm: React.FC = () => {
     }
   }
 
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const result = await AuthService.sendMagicLink(magicLinkEmail)
+      toast.success(result.message || 'Magic link sent! Check your email.')
+    } catch (error: any) {
+      if (error instanceof ValidationError) {
+        toast.error(error.message)
+      } else if (error instanceof AuthenticationError) {
+        toast.error(error.message)
+      } else {
+        toast.error('Failed to send magic link. Please try again.')
+      }
+    }
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Card className="w-full max-w-md">
@@ -136,9 +153,10 @@ export const LoginForm: React.FC = () => {
           )}
           
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsTrigger value="magic">Magic Link</TabsTrigger>
               <TabsTrigger value="reset">Reset</TabsTrigger>
             </TabsList>
             
@@ -205,6 +223,30 @@ export const LoginForm: React.FC = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating account...' : 'Sign Up'}
                 </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="magic">
+              <form onSubmit={handleMagicLink} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="magicLinkEmail">Email</Label>
+                  <Input
+                    id="magicLinkEmail"
+                    type="email"
+                    value={magicLinkEmail}
+                    onChange={(e) => setMagicLinkEmail(e.target.value)}
+                    placeholder="Enter your email for magic link"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Sending...' : 'Send Magic Link'}
+                </Button>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    We'll send you a secure link to sign in without a password
+                  </p>
+                </div>
               </form>
             </TabsContent>
             

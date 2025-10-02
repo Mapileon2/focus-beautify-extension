@@ -332,4 +332,168 @@ export class AuthService {
 
     if (error) throw error
   }
+
+  // ===== ENHANCED EMAIL SERVICES =====
+
+  // Magic Link Authentication
+  static async sendMagicLink(email: string) {
+    try {
+      this.validateEmail(email)
+      
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/magic-link`,
+        },
+      })
+
+      if (error) {
+        this.handleAuthError(error)
+      }
+
+      return { success: true, message: 'Magic link sent to your email!' }
+    } catch (error) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
+        throw error
+      }
+      
+      console.error('Magic link error:', error)
+      throw new AuthenticationError('Failed to send magic link. Please try again.', 'MAGIC_LINK_FAILED')
+    }
+  }
+
+  // Verify Magic Link
+  static async verifyMagicLink(token: string, email: string) {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      })
+
+      if (error) {
+        this.handleAuthError(error)
+      }
+
+      return data
+    } catch (error) {
+      console.error('Magic link verification error:', error)
+      throw new AuthenticationError('Invalid or expired magic link.', 'MAGIC_LINK_INVALID')
+    }
+  }
+
+  // Change Email Address
+  static async changeEmail(newEmail: string) {
+    try {
+      this.validateEmail(newEmail)
+      
+      const normalizedEmail = newEmail.trim().toLowerCase()
+
+      const { error } = await supabase.auth.updateUser({
+        email: normalizedEmail,
+      }, {
+        emailRedirectTo: `${window.location.origin}/change-email`
+      })
+
+      if (error) {
+        this.handleAuthError(error)
+      }
+
+      return { success: true, message: 'Email change confirmation sent to your new email address.' }
+    } catch (error) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
+        throw error
+      }
+      
+      console.error('Change email error:', error)
+      throw new AuthenticationError('Failed to change email. Please try again.', 'EMAIL_CHANGE_FAILED')
+    }
+  }
+
+  // Invite User (Admin function)
+  static async inviteUser(email: string, redirectTo?: string) {
+    try {
+      this.validateEmail(email)
+      
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const { data, error } = await supabase.auth.admin.inviteUserByEmail(normalizedEmail, {
+        redirectTo: redirectTo || `${window.location.origin}/invite-accept`
+      })
+
+      if (error) {
+        this.handleAuthError(error)
+      }
+
+      return { success: true, message: 'Invitation sent successfully!', data }
+    } catch (error) {
+      if (error instanceof ValidationError || error instanceof AuthenticationError) {
+        throw error
+      }
+      
+      console.error('Invite user error:', error)
+      throw new AuthenticationError('Failed to send invitation. Please try again.', 'INVITE_FAILED')
+    }
+  }
+
+  // Reauthentication
+  static async reauthenticate() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user?.email) {
+        throw new AuthenticationError('No user session found.', 'NO_SESSION')
+      }
+
+      // Send reauthentication email
+      const { error } = await supabase.auth.reauthenticate()
+
+      if (error) {
+        this.handleAuthError(error)
+      }
+
+      return { success: true, message: 'Reauthentication email sent!' }
+    } catch (error) {
+      if (error instanceof AuthenticationError) {
+        throw error
+      }
+      
+      console.error('Reauthentication error:', error)
+      throw new AuthenticationError('Failed to send reauthentication email.', 'REAUTH_FAILED')
+    }
+  }
+
+  // Get all user sessions (for security)
+  static async getUserSessions() {
+    try {
+      const { data, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        throw new AuthenticationError('Failed to get session information.', 'SESSION_ERROR')
+      }
+
+      return data
+    } catch (error) {
+      console.error('Get sessions error:', error)
+      throw new AuthenticationError('Failed to retrieve session information.', 'SESSION_FAILED')
+    }
+  }
+
+  // Sign out from all devices
+  static async signOutEverywhere() {
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      
+      if (error) {
+        this.handleAuthError(error)
+      }
+
+      return { success: true, message: 'Signed out from all devices successfully.' }
+    } catch (error) {
+      console.error('Global signout error:', error)
+      throw new AuthenticationError('Failed to sign out from all devices.', 'GLOBAL_SIGNOUT_FAILED')
+    }
+  }
 }

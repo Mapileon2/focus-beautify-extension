@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Focus Timer</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f8fafc; 
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            padding: 40px 20px; 
+            text-align: center; 
+        }
+        .logo { 
+            color: white; 
+            font-size: 32px; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .subtitle { 
+            color: rgba(255,255,255,0.9); 
+            font-size: 18px; 
+            font-weight: 300;
+        }
+        .content { 
+            padding: 40px 30px; 
+        }
+        .welcome-message {
+            font-size: 24px;
+            color: #1a202c;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .description {
+            color: #4a5568;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        .button { 
+            display: inline-block; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 18px 36px; 
+            text-decoration: none; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            font-size: 16px;
+            margin: 20px 0; 
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .features {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            color: #2d3748;
+        }
+        .feature-icon {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+        .footer { 
+            background: #f1f5f9; 
+            padding: 30px; 
+            text-align: center; 
+            color: #64748b; 
+            font-size: 14px; 
+        }
+        .security-note {
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .link-backup {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 12px;
+            color: #718096;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎯 Focus Timer</div>
+            <div class="subtitle">Boost Your Productivity</div>
+        </div>
+        <div class="content">
+            <h2 class="welcome-message">Welcome to Focus Timer!</h2>
+            <p class="description">
+                Thanks for signing up! You're just one click away from unlocking your productivity potential and joining thousands of users who have transformed their work habits.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ .ConfirmationURL }}" class="button">Confirm Email Address</a>
+            </div>
+            
+            <div class="features">
+                <h3 style="margin-top: 0; color: #2d3748;">What you'll get access to:</h3>
+                <div class="feature-item">
+                    <span class="feature-icon">⏱️</span>
+                    <span>Customizable Pomodoro timers</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <span>Detailed productivity analytics</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🎯</span>
+                    <span>Goal tracking and achievements</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📱</span>
+                    <span>Cross-device synchronization</span>
+                </div>
+            </div>
+            
+            <div class="security-note">
+                <strong>🔒 Security Notice:</strong> This confirmation link will expire in 24 hours for your security. If you didn't create this account, you can safely ignore this email.
+            </div>
+            
+            <div class="link-backup">
+                <strong>Can't click the button?</strong> Copy and paste this link into your browser:<br>
+                {{ .ConfirmationURL }}
+            </div>
+        </div>
+        <div class="footer">
+            <p><strong>Focus Timer</strong> - Your Productivity Companion</p>
+            <p>Need help? Contact us at support@focustimer.app</p>
+            <p>© 2024 Focus Timer. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

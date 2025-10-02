@@ -14,6 +14,8 @@ import { AuthenticatedDashboard } from "./components/AuthenticatedDashboard";
 import { ExternalSmilePopupPage } from "./pages/ExternalSmilePopupPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { EmailConfirmationPage } from "./pages/EmailConfirmationPage";
+import { MagicLinkPage } from "./pages/MagicLinkPage";
+import { ChangeEmailPage } from "./pages/ChangeEmailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -87,6 +89,8 @@ const App = () => {
                     <Route path="/smile-popup" element={<ExternalSmilePopupPage />} />
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/confirm-email" element={<EmailConfirmationPage />} />
+                    <Route path="/magic-link" element={<MagicLinkPage />} />
+                    <Route path="/change-email" element={<ChangeEmailPage />} />
                     
                     {/* Fallback for extension */}
                     <Route path="*" element={<ChromeExtensionMain />} />
@@ -103,6 +107,8 @@ const App = () => {
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/smile-popup" element={<ExternalSmilePopupPage />} />
                     <Route path="/confirm-email" element={<EmailConfirmationPage />} />
+                    <Route path="/magic-link" element={<MagicLinkPage />} />
+                    <Route path="/change-email" element={<ChangeEmailPage />} />
                     
                     {/* 404 Catch-all - Must be last */}
                     <Route path="*" element={<NotFound />} />

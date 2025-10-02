@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Verification - Focus Timer</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f8fafc; 
+            line-height: 1.6;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+            padding: 40px 20px; 
+            text-align: center; 
+            position: relative;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(255,255,255,0.1) 2px,
+                rgba(255,255,255,0.1) 4px
+            );
+        }
+        .logo { 
+            color: white; 
+            font-size: 32px; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+        .subtitle { 
+            color: rgba(255,255,255,0.9); 
+            font-size: 18px; 
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+        .content { 
+            padding: 40px 30px; 
+        }
+        .title {
+            font-size: 24px;
+            color: #1a202c;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .description {
+            color: #4a5568;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        .button { 
+            display: inline-block; 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+            color: white; 
+            padding: 18px 36px; 
+            text-decoration: none; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            font-size: 16px;
+            margin: 20px 0; 
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            transition: transform 0.2s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .security-alert { 
+            background: #fee2e2; 
+            border: 1px solid #ef4444; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 25px 0; 
+            border-left: 4px solid #dc2626;
+        }
+        .security-alert strong {
+            color: #991b1b;
+        }
+        .verification-reasons {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        .reason {
+            display: flex;
+            align-items: flex-start;
+            margin: 12px 0;
+            color: #374151;
+        }
+        .reason-icon {
+            margin-right: 10px;
+            font-size: 16px;
+            margin-top: 2px;
+        }
+        .footer { 
+            background: #f1f5f9; 
+            padding: 30px; 
+            text-align: center; 
+            color: #64748b; 
+            font-size: 14px; 
+        }
+        .urgent-contact {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .urgent-contact h4 {
+            color: #991b1b;
+            margin-top: 0;
+        }
+        .contact-button {
+            display: inline-block;
+            background: #dc2626;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        .link-backup {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 12px;
+            color: #718096;
+            word-break: break-all;
+        }
+        .timeline {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .timeline h4 {
+            color: #92400e;
+            margin-top: 0;
+        }
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            color: #78350f;
+        }
+        .timeline-time {
+            background: #fbbf24;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            min-width: 60px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔐 Focus Timer</div>
+            <div class="subtitle">Security Verification Required</div>
+        </div>
+        <div class="content">
+            <h2 class="title">Security Verification Required</h2>
+            <p class="description">
+                We've detected unusual activity on your Focus Timer account and need to verify your identity to keep your account secure. This is a standard security measure to protect your data.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ .ConfirmationURL }}" class="button">Verify My Identity</a>
+            </div>
+            
+            <div class="verification-reasons">
+                <h4 style="margin-top: 0; color: #374151;">Why verification might be needed:</h4>
+                <div class="reason">
+                    <span class="reason-icon">🌍</span>
+                    <span>Login from a new location or device</span>
+                </div>
+                <div class="reason">
+                    <span class="reason-icon">🕐</span>
+                    <span>Login at an unusual time</span>
+                </div>
+                <div class="reason">
+                    <span class="reason-icon">🔄</span>
+                    <span>Multiple failed login attempts</span>
+                </div>
+                <div class="reason">
+                    <span class="reason-icon">⚙️</span>
+                    <span>Changes to account settings</span>
+                </div>
+                <div class="reason">
+                    <span class="reason-icon">🛡️</span>
+                    <span>Routine security check</span>
+                </div>
+            </div>
+            
+            <div class="timeline">
+                <h4>⏰ Verification Timeline:</h4>
+                <div class="timeline-item">
+                    <div class="timeline-time">NOW</div>
+                    <div>Click verification link</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">30 MIN</div>
+                    <div>Link expires for security</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-time">1 HOUR</div>
+                    <div>Account may be temporarily locked</div>
+                </div>
+            </div>
+            
+            <div class="security-alert">
+                <strong>🚨 Critical Security Notice:</strong> This verification link will expire in 30 minutes. If you didn't request this verification or suspect unauthorized access, please contact our security team immediately.
+            </div>
+            
+            <div class="urgent-contact">
+                <h4>🆘 Need Immediate Help?</h4>
+                <p>If you believe your account has been compromised:</p>
+                <a href="mailto:security@focustimer.app" class="contact-button">Email Security Team</a>
+                <a href="tel:+1-800-FOCUS-1" class="contact-button">Call Emergency Line</a>
+            </div>
+            
+            <div class="link-backup">
+                <strong>Can't click the button?</strong> Copy and paste this link into your browser:<br>
+                {{ .ConfirmationURL }}
+            </div>
+        </div>
+        <div class="footer">
+            <p><strong>Focus Timer Security Team</strong></p>
+            <p>For immediate security concerns: security@focustimer.app | +1-800-FOCUS-1</p>
+            <p>© 2024 Focus Timer. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
