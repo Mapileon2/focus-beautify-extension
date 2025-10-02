@@ -148,7 +148,7 @@ const SmilePopup: React.FC<SmilePopupProps> = ({
                   Time's Up!
                 </h3>
                 <p className="text-muted-foreground">
-                  Take a moment to smile and recharge 😊
+                  Time to Smile and recharge!
                 </p>
               </div>
             </CardHeader>

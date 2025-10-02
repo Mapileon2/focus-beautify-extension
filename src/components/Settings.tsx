@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle } from 'lucide-react';
+import { Upload, Image, Palette, Bell, Timer, Smile, Sparkles, Shield, Download, Key, Save, AlertTriangle, LogOut, User } from 'lucide-react';
 import { GeminiAISettings } from './GeminiAISettings';
 import { ImageUpload } from './ImageUpload';
 
 import { useSmilePopupSettings, useAppSettings } from '@/hooks/useChromeStorage';
 import { useToast } from '@/hooks/use-toast';
 import { clearChromeStorage, checkStorageHealth } from '@/utils/storageCleanup';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SmilePopupSettings {
   enabled: boolean;
@@ -41,6 +42,7 @@ interface AppSettings {
 
 export function Settings() {
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   
   // Use Chrome storage hooks
   const {
@@ -682,6 +684,46 @@ export function Settings() {
               </Button>
             </div>
           </Card>
+
+          {/* Account Management */}
+          {user && (
+            <Card className="glass p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
+                <User className="h-5 w-5" />
+                Account
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-card/50">
+                  <div>
+                    <p className="font-medium text-foreground">Signed in as</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                      toast({
+                        title: "Signed Out",
+                        description: "You have been successfully signed out.",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Sign Out Failed",
+                        description: "There was an error signing out. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 

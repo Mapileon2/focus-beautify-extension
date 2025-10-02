@@ -19,6 +19,7 @@ import {
   useUserPreferences,
   useUpdateUserPreferences
 } from '@/hooks/useSupabaseQueries';
+import { GoalCreationDialog } from './GoalCreationDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { 
@@ -45,11 +46,12 @@ import {
   CheckCircle,
   Star,
   Flame,
-  Zap
+  Zap,
+  LogOut
 } from 'lucide-react';
 
 export function UserProfile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
@@ -217,13 +219,14 @@ export function UserProfile() {
                 </div>
               </div>
 
-              <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Profile
-                  </Button>
-                </DialogTrigger>
+              <div className="flex gap-2">
+                <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Edit Profile</DialogTitle>
@@ -323,7 +326,23 @@ export function UserProfile() {
                     </div>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+                
+                <Button 
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                      toast.success('Signed out successfully!');
+                    } catch (error) {
+                      toast.error('Failed to sign out');
+                    }
+                  }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </div>
           </Card>
 
@@ -529,6 +548,24 @@ export function UserProfile() {
 
         {/* Goals Tab */}
         <TabsContent value="goals" className="space-y-4">
+          {/* Goals Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">Your Goals</h3>
+              <p className="text-sm text-muted-foreground">
+                Track your progress and achieve your objectives
+              </p>
+            </div>
+            {goals && goals.length > 0 && (
+              <GoalCreationDialog>
+                <Button>
+                  <Target className="mr-2 h-4 w-4" />
+                  Create Goal
+                </Button>
+              </GoalCreationDialog>
+            )}
+          </div>
+
           {goalsLoading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -571,7 +608,9 @@ export function UserProfile() {
                   <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">No Active Goals</h3>
                   <p className="text-muted-foreground mb-4">Set some goals to track your progress!</p>
-                  <Button>Create Your First Goal</Button>
+                  <GoalCreationDialog>
+                    <Button>Create Your First Goal</Button>
+                  </GoalCreationDialog>
                 </Card>
               )}
             </div>

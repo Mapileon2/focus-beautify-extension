@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { FocusTimer } from '@/components/FocusTimer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LayoutDashboard, Settings, BarChart3, Database, Wifi, WifiOff } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Database, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { testSupabaseConnection } from '@/utils/supabaseTest';
 import { quickStorageTest } from '@/utils/storageTest';
 
 export function ChromeExtensionMain() {
-  const { user, loading } = useAuth()
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
+  const { user, loading } = useAuth();
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
 
   useEffect(() => {
     const checkBackend = async () => {
@@ -19,21 +18,21 @@ export function ChromeExtensionMain() {
         const [isConnected, storageWorking] = await Promise.all([
           testSupabaseConnection(),
           quickStorageTest()
-        ])
+        ]);
         
         if (isConnected && storageWorking) {
-          setBackendStatus('connected')
+          setBackendStatus('connected');
         } else if (isConnected) {
-          setBackendStatus('disconnected') // Connected but storage issues
+          setBackendStatus('disconnected'); // Connected but storage issues
         } else {
-          setBackendStatus('disconnected')
+          setBackendStatus('disconnected');
         }
       } catch (error) {
-        setBackendStatus('disconnected')
+        setBackendStatus('disconnected');
       }
-    }
-    checkBackend()
-  }, [])
+    };
+    checkBackend();
+  }, []);
 
   const openDashboard = () => {
     // For Chrome extension, this would open the full dashboard in a new tab

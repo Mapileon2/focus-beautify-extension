@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Focus Timer - Pomodoro Productivity",
+  "name": "Focus Timer - Pomodoro & Productivity",
   "version": "1.0.0",
-  "description": "A beautiful Pomodoro timer with motivational quotes and productivity tracking",
+  "description": "Beautiful Pomodoro timer with focus sessions, break reminders, task management, and productivity tracking. Stay focused and productive!",
   
   "permissions": [
     "storage",
@@ -36,7 +36,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["dashboard.html", "fullapp.html", "smile-popup.html"],
+      "resources": ["dashboard.html", "fullapp.html", "smile-popup.html", "logo.svg", "icons/*.svg"],
       "matches": ["*://*/*"]
     }
   ],

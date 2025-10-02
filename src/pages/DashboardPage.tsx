@@ -1,6 +1,6 @@
 import React from 'react';
-import { Dashboard } from '@/components/Dashboard';
+import { DashboardRouter } from '@/components/DashboardRouter';
 
 export function DashboardPage() {
-  return <Dashboard />;
+  return <DashboardRouter />;
 }

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/hooks/useAuth'
-import { AuthService } from '@/services/authService'
+import { AuthService, AuthenticationError, ValidationError } from '@/services/authService'
 import { toast } from 'sonner'
 import { Mail, AlertCircle } from 'lucide-react'
 
@@ -25,12 +25,20 @@ export const LoginForm: React.FC = () => {
       await signIn(email, password)
       toast.success('Successfully signed in!')
     } catch (error: any) {
-      if (error.message?.includes('Email not confirmed')) {
-        setShowEmailConfirmation(true)
-        setPendingEmail(email)
-        toast.error('Please confirm your email address before signing in.')
+      if (error instanceof AuthenticationError) {
+        if (error.code === 'EMAIL_NOT_CONFIRMED') {
+          setShowEmailConfirmation(true)
+          setPendingEmail(email)
+          toast.error('Please confirm your email address before signing in.')
+        } else if (error.code === 'INVALID_CREDENTIALS') {
+          toast.error('Invalid email or password. Please check your credentials.')
+        } else {
+          toast.error(error.message)
+        }
+      } else if (error instanceof ValidationError) {
+        toast.error(error.message)
       } else {
-        toast.error(error.message || 'Failed to sign in')
+        toast.error('An unexpected error occurred. Please try again.')
       }
     }
   }
@@ -38,27 +46,32 @@ export const LoginForm: React.FC = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const result = await signUp(email, password, fullName)
-      
-      if (result.user && !result.user.email_confirmed_at) {
-        setShowEmailConfirmation(true)
-        setPendingEmail(email)
-        toast.success('Account created! Please check your email to verify your account.')
-      } else {
-        toast.success('Account created and verified! You can now sign in.')
-      }
+      await signUp(email, password, fullName)
+      toast.success('Account created successfully! Please check your email to verify your account.')
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create account')
+      if (error instanceof AuthenticationError) {
+        toast.error(error.message)
+      } else if (error instanceof ValidationError) {
+        toast.error(error.message)
+      } else {
+        toast.error('Failed to create account. Please try again.')
+      }
     }
   }
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await resetPassword(resetEmail)
-      toast.success('Password reset email sent! Check your inbox.')
+      const result = await resetPassword(resetEmail)
+      toast.success(result.message || 'Password reset email sent! Check your inbox.')
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset email')
+      if (error instanceof ValidationError) {
+        toast.error(error.message)
+      } else if (error instanceof AuthenticationError) {
+        toast.error(error.message)
+      } else {
+        toast.error('Failed to send reset email. Please try again.')
+      }
     }
   }
 
@@ -86,7 +99,10 @@ export const LoginForm: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Focus Timer</CardTitle>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src="/logo.svg" alt="Focus Timer" className="w-12 h-12" />
+            <CardTitle>Focus Timer</CardTitle>
+          </div>
           <CardDescription>
             Sign in to sync your data across devices
           </CardDescription>

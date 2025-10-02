@@ -1,8 +1,20 @@
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, createContext } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { AuthService } from '@/services/authService'
 import { UserService } from '@/services/userService'
-import { AuthContext } from '@/components/AuthProvider'
+
+interface AuthContextType {
+  user: User | null
+  session: Session | null
+  loading: boolean
+  signUp: (email: string, password: string, fullName?: string) => Promise<any>
+  signIn: (email: string, password: string) => Promise<any>
+  signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ success: boolean; message: string }>
+  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -18,54 +30,94 @@ export const useAuthState = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true
+
     // Get initial session
-    AuthService.getCurrentSession().then((session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    const initializeAuth = async () => {
+      try {
+        const session = await AuthService.getCurrentSession()
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initializeAuth()
 
     // Listen for auth changes
     const { data: { subscription } } = AuthService.onAuthStateChange(
       async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+        console.log('Auth state change:', event, session)
+        
+        if (!mounted) return
 
-        // Create user profile if it's a new signup
-        if (event === 'SIGNED_UP' && session?.user) {
-          try {
-            await UserService.createUserProfile({
-              id: session.user.id,
-              email: session.user.email!,
-              full_name: session.user.user_metadata?.full_name || null,
-              avatar_url: session.user.user_metadata?.avatar_url || null,
-            })
-          } catch (error) {
-            console.error('Error creating user profile:', error)
+        try {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+
+          // Create user profile if it's a new signup
+          if (event === 'SIGNED_UP' && session?.user) {
+            try {
+              await UserService.createUserProfile({
+                id: session.user.id,
+                email: session.user.email!,
+                full_name: session.user.user_metadata?.full_name || null,
+                avatar_url: session.user.user_metadata?.avatar_url || null,
+              })
+            } catch (error) {
+              console.error('Error creating user profile:', error)
+            }
+          }
+        } catch (error) {
+          console.error('Error in auth state change handler:', error)
+          if (mounted) {
+            setLoading(false)
           }
         }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     setLoading(true)
     try {
-      await AuthService.signUp(email, password, fullName)
-    } finally {
+      console.log('Starting signup process...')
+      const result = await AuthService.signUp(email, password, fullName)
+      console.log('Signup result:', result)
+      
+      // Set loading to false after a short delay to allow auth state to update
+      setTimeout(() => setLoading(false), 1000)
+      
+      return result
+    } catch (error) {
+      console.error('Signup error in hook:', error)
       setLoading(false)
+      throw error
     }
   }
 
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     try {
-      await AuthService.signIn(email, password)
-    } finally {
+      const result = await AuthService.signIn(email, password)
+      // Don't set loading to false here - let the auth state change handle it
+      return result
+    } catch (error) {
       setLoading(false)
+      throw error
     }
   }
 
@@ -79,7 +131,7 @@ export const useAuthState = () => {
   }
 
   const resetPassword = async (email: string) => {
-    await AuthService.resetPassword(email)
+    return await AuthService.resetPassword(email)
   }
 
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {

@@ -1,7 +1,7 @@
-import { Dashboard } from '@/components/Dashboard';
+import { AppRouter } from '@/components/AppRouter';
 
 const Index = () => {
-  return <Dashboard />;
+  return <AppRouter />;
 };
 
 export default Index;

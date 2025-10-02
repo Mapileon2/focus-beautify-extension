@@ -243,7 +243,7 @@ export function ExternalSmilePopup({
               Great Work!
             </h1>
             <p className="text-gray-600 text-lg">
-              Time to celebrate and recharge! 😊
+              Time to Smile and recharge!
             </p>
           </div>
         </CardHeader>

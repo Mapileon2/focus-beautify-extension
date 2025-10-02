@@ -5,6 +5,7 @@ import { SessionAnalytics } from './SessionAnalytics';
 import { AiAssistant } from './AiAssistant';
 import { UserProfile } from './UserProfile';
 import { Settings } from './Settings';
+import { DashboardAnalyticsGate, DashboardAIGate, DashboardAdvancedGate } from './DashboardFeatureGate';
 import { useAuth } from '@/hooks/useAuth';
 import { useSessions } from '@/hooks/useSupabaseQueries';
 
@@ -18,7 +19,8 @@ import {
   User, 
   Settings as SettingsIcon,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -30,7 +32,7 @@ export function Dashboard({ className }: DashboardProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true); // Default to open for better UX
   
   // Get user data and session statistics
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: sessions = [] } = useSessions(200);
 
   // Calculate user level and stats
@@ -51,10 +53,16 @@ export function Dashboard({ className }: DashboardProps) {
   const tabs = [
     { id: 'timer', label: 'Focus Timer', icon: Timer, component: FocusTimer },
     { id: 'quotes', label: 'Inspiration', icon: Quote, component: EnhancedQuotesDashboard },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, component: SessionAnalytics },
-    { id: 'ai', label: 'AI Assistant', icon: Bot, component: AiAssistant },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, component: () => (
+      <DashboardAnalyticsGate><SessionAnalytics /></DashboardAnalyticsGate>
+    )},
+    { id: 'ai', label: 'AI Assistant', icon: Bot, component: () => (
+      <DashboardAIGate><AiAssistant /></DashboardAIGate>
+    )},
     { id: 'profile', label: 'Profile', icon: User, component: UserProfile },
-    { id: 'settings', label: 'Settings', icon: SettingsIcon, component: Settings },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon, component: () => (
+      <DashboardAdvancedGate><Settings /></DashboardAdvancedGate>
+    )},
   ];
 
   const activeTabConfig = tabs.find(tab => tab.id === activeTab);
@@ -130,6 +138,17 @@ export function Dashboard({ className }: DashboardProps) {
                     }
                   </p>
                 </div>
+                {user && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={signOut}
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    title="Sign Out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>

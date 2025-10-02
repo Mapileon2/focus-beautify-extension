@@ -7,6 +7,8 @@ import { TimerCircle } from './TimerCircle';
 import { MiniTimerSettings } from './MiniTimerSettings';
 import { SessionStats } from './SessionStats';
 import { TaskList } from './TaskList';
+import { TaskManagementGate } from './FeatureGate';
+import { DashboardTaskManagementGate } from './DashboardFeatureGate';
 import SmilePopup from './SmilePopup';
 import { useToast } from '@/hooks/use-toast';
 import { useSmilePopupSettings } from '@/hooks/useChromeStorage';
@@ -257,9 +259,12 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
     <div className="min-h-screen bg-gradient-to-br from-background to-background-secondary p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 text-center">
-          <h1 className="mb-2 text-4xl font-light tracking-tight text-foreground">
-            Focus Timer
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <img src="/logo.svg" alt="Focus Timer" className="w-16 h-16" />
+            <h1 className="text-4xl font-light tracking-tight text-foreground">
+              Focus Timer
+            </h1>
+          </div>
           <p className="text-muted-foreground">
             Stay productive with the Pomodoro Technique
           </p>
@@ -343,7 +348,23 @@ export function FocusTimer({ isCompact = false }: FocusTimerProps) {
           </div>
 
           <div className="lg:col-span-1">
-            <TaskList />
+            {/* Only show TaskList with gates in web contexts, not in extension */}
+            {isCompact ? (
+              // Extension mode - no task list, keep it simple
+              <div className="text-center text-sm text-muted-foreground">
+                <p>Click Dashboard for full features</p>
+              </div>
+            ) : window.location.pathname === '/dashboard' ? (
+              // Dashboard context - use dashboard gates
+              <DashboardTaskManagementGate>
+                <TaskList />
+              </DashboardTaskManagementGate>
+            ) : (
+              // Web app context - use regular gates
+              <TaskManagementGate>
+                <TaskList />
+              </TaskManagementGate>
+            )}
           </div>
         </div>
 
